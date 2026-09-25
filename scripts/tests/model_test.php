@@ -201,6 +201,22 @@ it('where() recusa operador fora da allowlist', function (): void {
     });
 });
 
+it('where() recusa um operador SQL valido mas fora da allowlist, isolado da execucao da query', function (): void {
+    widgetFixture();
+
+    // '<>' e um operador de comparacao SQL perfeitamente valido (nao esta em
+    // QueryBuilder::$operators, que usa '!=' pra isso). Se a checagem da
+    // allowlist fosse removida, esta chamada executaria com sucesso e NENHUMA
+    // excecao seria lancada — diferente do teste acima, que so falha porque o
+    // texto malicioso produz SQL invalido e o PDO reclama por outro motivo.
+    // Isso prova que e especificamente a allowlist que bloqueia, e nao um
+    // efeito colateral de SQL malformado. where() lanca a excecao de forma
+    // sincrona, antes de qualquer SQL ser montado, entao nem precisa de get().
+    assertThrows(function (): void {
+        Widget::where('price', '<>', 1);
+    });
+});
+
 it('whereIn() filtra pelos ids informados', function (): void {
     $database = widgetFixture();
     seedWidgets($database);
