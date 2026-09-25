@@ -16,39 +16,25 @@ class Migrator
         $this->migrationsPath = rtrim($migrationsPath, DIRECTORY_SEPARATOR);
     }
 
+    // Roda todas as pendentes em ordem, parando na primeira que falhar (uma
+    // migration invalida nao impede a leitura do estado atual — so
+    // interrompe a aplicacao das seguintes). Delegado inteiramente a
+    // runOne(), que ja tem o try/catch(PDOException) usado por
+    // runNextPending() — sem isso, uma migration com SQL invalido matava o
+    // processo com uma excecao nao tratada em vez de reportar o erro.
     public function run(): array
     {
         $this->ensureMigrationsTable();
-        $pdo = $this->database->connection();
-
-        $executedNames = $this->getExecutedMigrationNames();
-        $migrationFiles = $this->getMigrationFiles();
 
         $results = [];
 
-        foreach ($migrationFiles as $filePath) {
-            $migrationName = basename($filePath);
+        foreach ($this->pending() as $migrationName) {
+            $result = $this->runOne($migrationName);
+            $results[] = $result;
 
-            if (in_array($migrationName, $executedNames, true)) {
-                $results[] = ['migration' => $migrationName, 'status' => 'skipped'];
-                continue;
+            if ($result['status'] === 'error') {
+                break;
             }
-
-            $sql = file_get_contents($filePath);
-
-            if ($sql === false || trim($sql) === '') {
-                $this->database->execute('INSERT INTO migrations (migration) VALUES (:migration)', [
-                    'migration' => $migrationName,
-                ]);
-                $results[] = ['migration' => $migrationName, 'status' => 'empty'];
-                continue;
-            }
-
-            $pdo->exec($sql);
-            $this->database->execute('INSERT INTO migrations (migration) VALUES (:migration)', [
-                'migration' => $migrationName,
-            ]);
-            $results[] = ['migration' => $migrationName, 'status' => 'executed'];
         }
 
         return $results;

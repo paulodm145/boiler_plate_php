@@ -23,8 +23,11 @@ foreach ($results as $result) {
         echo "Executed {$result['migration']}\n";
     } elseif ($result['status'] === 'skipped') {
         echo "Skipping {$result['migration']}\n";
-    } else {
+    } elseif ($result['status'] === 'empty') {
         echo "Skipping empty migration {$result['migration']}\n";
+    } else {
+        fwrite(STDERR, "Failed {$result['migration']}: {$result['error']}\n");
+        exit(1);
     }
 }
 

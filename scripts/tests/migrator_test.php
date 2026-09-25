@@ -94,3 +94,30 @@ it('run continua funcionando', function (): void {
     assertSame('executed', $results[0]['status']);
     assertSame('executed', $results[1]['status']);
 });
+
+it('run nao repete uma migration ja executada numa chamada anterior', function (): void {
+    $dir = migrationsFixture(['001_a.sql' => 'CREATE TABLE a (id INT);']);
+    $database = testDatabase();
+
+    (new Migrator($database, $dir))->run();
+    $results = (new Migrator($database, $dir))->run();
+
+    assertSame([], $results, 'nada pendente na segunda chamada, run() nao deveria reprocessar nada');
+});
+
+it('run para na primeira migration com erro de SQL, sem lancar excecao', function (): void {
+    $dir = migrationsFixture([
+        '001_a.sql' => 'CREATE TABLE a (id INT);',
+        '002_ruim.sql' => 'CREATE TABLE (((;',
+        '003_c.sql' => 'CREATE TABLE c (id INT);',
+    ]);
+
+    $migrator = new Migrator(testDatabase(), $dir);
+    $results = $migrator->run();
+
+    assertSame(2, count($results), 'deveria parar depois da migration com erro, sem tentar a 003');
+    assertSame('executed', $results[0]['status']);
+    assertSame('error', $results[1]['status']);
+    assertTrue(is_string($results[1]['error']) && $results[1]['error'] !== '');
+    assertSame(['002_ruim.sql', '003_c.sql'], $migrator->pending(), '002 e 003 continuam pendentes apos o erro');
+});
