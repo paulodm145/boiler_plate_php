@@ -4,17 +4,20 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\ErrorPage;
+use App\Core\InstallState;
 use App\Core\View;
 use App\Repositories\UserRepository;
 
 class AdminUserController
 {
     private $users;
+    private $rootPath;
 
     public function __construct()
     {
         Auth::requireAuth();
         $this->users = new UserRepository();
+        $this->rootPath = dirname(__DIR__, 2);
     }
 
     public function index(): void
@@ -23,6 +26,7 @@ class AdminUserController
             'title' => 'Usuarios | Admin',
             'user' => Auth::user(),
             'users' => $this->users->all(),
+            'pendingCount' => $this->pendingMigrationsCount(),
         ]);
     }
 
@@ -34,6 +38,7 @@ class AdminUserController
             'adminUser' => ['id' => null, 'name' => '', 'email' => ''],
             'isNew' => true,
             'error' => null,
+            'pendingCount' => $this->pendingMigrationsCount(),
         ]);
     }
 
@@ -58,6 +63,7 @@ class AdminUserController
             'adminUser' => $user,
             'isNew' => false,
             'error' => null,
+            'pendingCount' => $this->pendingMigrationsCount(),
         ]);
     }
 
@@ -79,11 +85,17 @@ class AdminUserController
                 'adminUser' => $this->users->find((int) $id),
                 'isNew' => false,
                 'error' => 'Voce nao pode excluir o proprio usuario.',
+                'pendingCount' => $this->pendingMigrationsCount(),
             ]);
             return;
         }
 
         $this->users->delete((int) $id);
         header('Location: /admin/users');
+    }
+
+    private function pendingMigrationsCount(): int
+    {
+        return (new InstallState($this->rootPath))->pendingCount();
     }
 }

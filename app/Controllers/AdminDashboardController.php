@@ -27,6 +27,7 @@ class AdminDashboardController
             'user' => Auth::user(),
             'userCount' => (new UserRepository())->count(),
             'pendingMigrationNames' => $pendingMigrationNames,
+            'pendingCount' => count($pendingMigrationNames),
         ]);
     }
 }

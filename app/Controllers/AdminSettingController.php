@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Auth;
+use App\Core\InstallState;
 use App\Core\View;
 use App\Repositories\SettingRepository;
 
@@ -23,6 +24,7 @@ class AdminSettingController
             'user' => Auth::user(),
             'settings' => $this->settings->all(),
             'success' => ($_GET['saved'] ?? '') === '1',
+            'pendingCount' => (new InstallState(dirname(__DIR__, 2)))->pendingCount(),
         ]);
     }
 

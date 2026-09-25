@@ -24,6 +24,9 @@ class AdminUpdateController
             'title' => 'Atualizar banco de dados | Admin',
             'user' => Auth::user(),
             'pending' => $this->migrator()->pending(),
+            // O banner de "ha migrations pendentes, va atualizar" nao faz
+            // sentido na propria pagina de atualizacao.
+            'pendingCount' => 0,
         ]);
     }
 
