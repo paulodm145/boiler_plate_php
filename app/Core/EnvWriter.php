@@ -59,7 +59,7 @@ class EnvWriter
             }
 
             [$key, $value] = explode('=', $line, 2);
-            $values[trim($key)] = $this->cleanValue(trim($value));
+            $values[trim($key)] = Env::cleanValue(trim($value));
         }
 
         return $values;
@@ -69,22 +69,6 @@ class EnvWriter
     {
         if ($value === '' || preg_match('/[\s"#\']/', $value) === 1) {
             return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
-        }
-
-        return $value;
-    }
-
-    private function cleanValue(string $value): string
-    {
-        if ($value === '') {
-            return '';
-        }
-
-        $first = substr($value, 0, 1);
-        $last = substr($value, -1);
-
-        if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
-            return str_replace(['\\"', '\\\\'], ['"', '\\'], substr($value, 1, -1));
         }
 
         return $value;

@@ -39,7 +39,7 @@ class Env
         return (string) $value;
     }
 
-    private static function cleanValue(string $value): string
+    public static function cleanValue(string $value): string
     {
         if ($value === '') {
             return '';
