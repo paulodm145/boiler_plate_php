@@ -1,13 +1,4 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></title>
-    <meta name="robots" content="noindex,nofollow">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/assets/css/app.css?v=<?= @filemtime(dirname(__DIR__, 4) . '/public/assets/css/app.css') ?: '1' ?>" rel="stylesheet">
-</head>
+<?php require dirname(__DIR__) . '/partials/head.php'; ?>
 <body class="admin-login-shell">
     <main class="container py-5">
         <div class="row justify-content-center align-items-center" style="min-height:85vh">
@@ -21,6 +12,7 @@
                     <?php endif; ?>
 
                     <form method="post" action="/admin/login">
+                        <?= \App\Core\Csrf::field() ?>
                         <div class="mb-3">
                             <label class="form-label" for="email">E-mail</label>
                             <input class="form-control" id="email" type="email" name="email" required autofocus>
