@@ -1,0 +1,11 @@
+.git
+.gitignore
+docs/
+storage/logs/
+public/uploads/*
+!public/uploads/.gitkeep
+storage/uploads/*
+!storage/uploads/.gitkeep
+node_modules/
+vendor/
+*.md
