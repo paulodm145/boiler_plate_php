@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Asset;
 use App\Core\Env;
 use App\Core\Text;
 
@@ -56,7 +57,7 @@ $pageUrl = $canonical ?? $appUrl;
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
-    <link href="/assets/css/site-theme.css?v=<?= @filemtime(dirname(__DIR__, 3) . '/public/assets/css/site-theme.css') ?: '1' ?>" rel="stylesheet">
+    <link href="/assets/css/site-theme.css?v=<?= Asset::version('assets/css/site-theme.css') ?>" rel="stylesheet">
 </head>
 <body>
     <header class="site-head py-3">

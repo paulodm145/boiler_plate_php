@@ -1,5 +1,7 @@
 <?php
 /** @var string $title */
+use App\Core\Asset;
+
 $includeFontAwesome = $includeFontAwesome ?? false;
 ?>
 <!doctype html>
@@ -13,5 +15,5 @@ $includeFontAwesome = $includeFontAwesome ?? false;
     <?php if ($includeFontAwesome): ?>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
     <?php endif; ?>
-    <link href="/assets/css/app.css?v=<?= @filemtime(dirname(__DIR__, 4) . '/public/assets/css/app.css') ?: '1' ?>" rel="stylesheet">
+    <link href="/assets/css/app.css?v=<?= Asset::version('assets/css/app.css') ?>" rel="stylesheet">
 </head>
