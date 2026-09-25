@@ -133,3 +133,111 @@ it('toArray() devolve os atributos com os casts aplicados', function (): void {
     assertSame(['x'], $array['tags']);
     assertSame(7, $array['price']);
 });
+
+class WidgetWithoutUuid extends Model
+{
+    protected $table = 'widgets';
+}
+
+function seedWidgets(Database $database): void
+{
+    Widget::create(['name' => 'A', 'is_active' => true, 'price' => 10]);
+    Widget::create(['name' => 'B', 'is_active' => false, 'price' => 20]);
+    Widget::create(['name' => 'C', 'is_active' => true, 'price' => 30]);
+}
+
+it('find() localiza pelo id e retorna null quando nao existe', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+    $first = Widget::where('name', 'A')->first();
+
+    assertSame('A', Widget::find($first->id)->name);
+    assertSame(null, Widget::find(999999));
+});
+
+it('all() retorna todas as linhas', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    assertSame(3, count(Widget::all()));
+});
+
+it('where() com operador de comparacao e orderBy funcionam juntos', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    $results = Widget::where('price', '>', 10)->orderBy('price', 'desc')->get();
+
+    assertSame(2, count($results));
+    assertSame('C', $results[0]->name);
+    assertSame('B', $results[1]->name);
+});
+
+it('duas clausulas where() na mesma coluna nao colidem (gotcha do PDO nativo)', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    $results = Widget::where('price', '>', 10)->where('price', '<', 30)->get();
+
+    assertSame(1, count($results));
+    assertSame('B', $results[0]->name);
+});
+
+it('where() recusa operador fora da allowlist', function (): void {
+    widgetFixture();
+
+    assertThrows(function (): void {
+        Widget::where('price', 'DROP TABLE widgets; --', 1)->get();
+    });
+});
+
+it('whereIn() filtra pelos ids informados', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+    $ids = array_map(function (Widget $widget): int {
+        return $widget->id;
+    }, Widget::where('is_active', 1)->get());
+
+    assertSame(2, count(Widget::query()->whereIn('id', $ids)->get()));
+});
+
+it('whereIn() com array vazio nao quebra e retorna vazio', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    assertSame([], Widget::query()->whereIn('id', [])->get());
+});
+
+it('limit()/offset() paginam os resultados', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    $page = Widget::query()->orderBy('price', 'asc')->limit(1)->offset(1)->get();
+
+    assertSame(1, count($page));
+    assertSame('B', $page[0]->name);
+});
+
+it('count() conta respeitando o where', function (): void {
+    $database = widgetFixture();
+    seedWidgets($database);
+
+    assertSame(2, Widget::where('is_active', 1)->count());
+});
+
+it('findByUuid() localiza pelo uuid gerado automaticamente', function (): void {
+    widgetFixture();
+    $widget = Widget::create(['name' => 'A', 'price' => 10]);
+
+    $found = Widget::findByUuid($widget->uuid);
+
+    assertSame($widget->id, $found->id);
+});
+
+it('findByUuid() lanca excecao se a subclasse nao declarou $uuidColumn', function (): void {
+    widgetFixture();
+
+    assertThrows(function (): void {
+        WidgetWithoutUuid::findByUuid('qualquer-coisa');
+    });
+});

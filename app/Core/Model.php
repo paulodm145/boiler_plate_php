@@ -59,6 +59,34 @@ abstract class Model
         return $model;
     }
 
+    public static function query(): QueryBuilder
+    {
+        return new QueryBuilder(static::class);
+    }
+
+    public static function find(int $id): ?self
+    {
+        $instance = new static();
+
+        return static::query()->where($instance->getKeyName(), $id)->first();
+    }
+
+    public static function all(): array
+    {
+        return static::query()->get();
+    }
+
+    public static function findByUuid(string $uuid): ?self
+    {
+        $instance = new static();
+
+        if ($instance->uuidColumn === null) {
+            throw new RuntimeException(static::class . ' nao declarou $uuidColumn.');
+        }
+
+        return static::query()->where($instance->uuidColumn, $uuid)->first();
+    }
+
     public function getTable(): string
     {
         if ($this->table === null) {
@@ -296,5 +324,10 @@ abstract class Model
     public function __isset($name): bool
     {
         return array_key_exists($name, $this->attributes);
+    }
+
+    public static function __callStatic($method, $args)
+    {
+        return call_user_func_array([static::query(), $method], $args);
     }
 }
