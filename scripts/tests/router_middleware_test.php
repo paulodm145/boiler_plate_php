@@ -45,6 +45,18 @@ class TestDummyController
     }
 }
 
+class TestCaptureMiddleware implements MiddlewareInterface
+{
+    public static $received = null;
+
+    public function handle(array $routeParams): ?string
+    {
+        self::$received = $routeParams;
+
+        return null;
+    }
+}
+
 it('rota sem middleware resolve para dispatch, como antes', function (): void {
     $router = new Router();
     $router->get('/sem-middleware/{id}', [TestDummyController::class, 'show']);
@@ -99,18 +111,6 @@ it('middleware que devolve Router::HALT nao despacha nem redireciona', function 
 });
 
 it('parametros nomeados da rota chegam a middleware por nome', function (): void {
-    class TestCaptureMiddleware implements MiddlewareInterface
-    {
-        public static $received = null;
-
-        public function handle(array $routeParams): ?string
-        {
-            self::$received = $routeParams;
-
-            return null;
-        }
-    }
-
     $router = new Router();
     $router->get('/usuarios/{userId}', [TestDummyController::class, 'show'], [TestCaptureMiddleware::class]);
     $router->resolve('GET', '/usuarios/42');
