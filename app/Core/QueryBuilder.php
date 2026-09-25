@@ -25,6 +25,12 @@ class QueryBuilder
         $this->table = (new $modelClass())->getTable();
     }
 
+    // $column (aqui e em orderBy()/whereIn()) e concatenado direto na SQL,
+    // sem allowlist — so o $operator passa por validacao. Isso espelha o
+    // resto do boilerplate: nomes de coluna sao sempre literais escritos no
+    // codigo (nunca vindos de input do usuario), o mesmo modelo de confianca
+    // que Database::fetch()/execute() ja usam em toda a camada de
+    // Repository. Nunca construa um $column a partir de input externo.
     public function where(string $column, $operatorOrValue, $value = null): self
     {
         if (func_num_args() === 2) {

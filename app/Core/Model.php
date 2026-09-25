@@ -11,6 +11,10 @@ use RuntimeException;
 abstract class Model
 {
     protected $table;
+    // Sempre uma coluna inteira auto-increment — save() casta o valor lido
+    // de lastInsertId() pra (int). Um identificador publico nao-inteiro
+    // (uuid) fica em $uuidColumn, coexistindo com esta PK, nunca a
+    // substituindo.
     protected $primaryKey = 'id';
     protected $fillable = [];
     protected $guarded = ['*'];

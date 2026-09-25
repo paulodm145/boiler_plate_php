@@ -41,6 +41,11 @@ class BelongsToMany extends Relation
         return $relatedClass::query()->whereIn($ownerKey, $ids)->get();
     }
 
+    // Check-then-insert, nao atomico: sob escrita concorrente na mesma
+    // dupla (foreignPivotKey, relatedPivotKey), duas chamadas podem ambas
+    // ver "nao existe" e inserir duas linhas. Deliberado — esta camada nao
+    // assume UNIQUE KEY na tabela pivot; um projeto que precise de garantia
+    // sob concorrencia deve adicionar essa constraint no proprio schema.
     public function attach(int $relatedId): void
     {
         $parentId = $this->parentId();
