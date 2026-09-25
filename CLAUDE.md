@@ -49,7 +49,7 @@ Controllers are thin HTTP glue over well-tested repositories and generally aren'
 
 Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deliberately, because the deploy target is FTP-only shared hosting with no SSH/Composer/Node. Everything under `App\` autoloads via a tiny PSR-4-ish autoloader (`App\Core\Autoloader`), not Composer.
 
-**Request flow:** `public/index.php` is the single entry point (document root is `public/`, but the root `.htaccess`/`index.php` shim covers hosts that serve from the project root instead — it just `require`s `public/index.php`). It: loads `.env` → starts the session → checks `App\Core\InstallState::isInstalled()` and hands off to `App\Core\InstallRoutes` if not → builds an `App\Core\Router` and registers every route inline (no route files/attributes) → dispatches. There's no DI container; controllers are instantiated fresh per request with no constructor arguments.
+**Request flow:** `public/index.php` is the single entry point (document root is `public/`, but the root `.htaccess`/`index.php` shim covers hosts that serve from the project root instead — it just `require`s `public/index.php`). It: loads `.env` → starts the session → checks `App\Core\InstallState::isInstalled()` and hands off to `App\Core\InstallRoutes` if not → builds an `App\Core\Router` and registers every route by `require`-ing `routes.php` (a plain script at the project root that returns a `function (Router $router): void` — no route files/attributes beyond this single one, no auto-discovery) → dispatches. There's no DI container; controllers are instantiated fresh per request with no constructor arguments.
 
 **Layers:**
 - `App\Controllers` — one class per feature area, HTTP-flow only.
@@ -74,7 +74,7 @@ docker run --rm -v "$(pwd):/app" php:7.2-cli php -l <file>
 
 Follow PSR-12, 4-space indentation, namespaces matching path (`App\Controllers\UserController` → `app/Controllers/UserController.php`). `PascalCase` classes, `camelCase` methods/variables, `snake_case` DB tables/columns.
 
-Routes are hand-registered in `public/index.php`, resolved through `App\Core\Router` — no filenames or query-string IDs in URLs, and route params meant to be public should be public identifiers (`{userUuid}`, `{slug}`), never internal ids.
+Routes are hand-registered in `routes.php` (project root, required by `public/index.php`), resolved through `App\Core\Router` — no filenames or query-string IDs in URLs, and route params meant to be public should be public identifiers (`{userUuid}`, `{slug}`), never internal ids.
 
 ## Gotchas already discovered on top of this boilerplate
 

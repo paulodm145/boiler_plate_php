@@ -39,7 +39,7 @@ Sem Composer, sem framework, sem build step — de propósito, pro alvo de produ
 1. Copie esta pasta (ou dê `git clone` se este repo virar remoto) com o nome do novo projeto.
 2. Ajuste `docker-compose.yml` (nomes de container/rede/volume, porta externa) e `.env.docker`/`.env.example` (nome da aplicação, banco).
 3. Rode `docker compose up -d --build` e acesse a porta configurada — cai no instalador.
-4. Adicione os `Controllers`/`Repositories`/`Views`/migrations específicos do domínio novo, registrando as rotas em `public/index.php`.
+4. Adicione os `Controllers`/`Repositories`/`Views`/migrations específicos do domínio novo, registrando as rotas em `routes.php`.
 5. Leia o `CLAUDE.md` antes de mexer no núcleo (`App\Core`) — ele documenta as decisões de arquitetura e as pegadinhas já descobertas (PHP 7.2, PDO com prepares nativos, etc.).
 
 ## Instalação
