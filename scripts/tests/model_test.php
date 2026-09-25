@@ -134,6 +134,16 @@ it('toArray() devolve os atributos com os casts aplicados', function (): void {
     assertSame(7, $array['price']);
 });
 
+it('acesso de propriedade a um nome que colide com um metodo nao invoca o metodo', function (): void {
+    $database = widgetFixture();
+    $widget = Widget::create(['name' => 'Caixa', 'price' => 5]);
+
+    $widget->delete;
+
+    $count = $database->fetch('SELECT COUNT(*) AS total FROM widgets')['total'];
+    assertSame(1, (int) $count, 'acessar $widget->delete como propriedade (sem parenteses) nao deveria apagar a linha');
+});
+
 class WidgetWithoutUuid extends Model
 {
     protected $table = 'widgets';

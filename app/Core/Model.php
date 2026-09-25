@@ -5,6 +5,7 @@ namespace App\Core;
 use App\Database\Database;
 use DateTime;
 use DateTimeZone;
+use ReflectionMethod;
 use RuntimeException;
 
 abstract class Model
@@ -293,6 +294,18 @@ abstract class Model
         static::connection()->execute($sql, $params);
     }
 
+    private function isRelationMethod(string $name): bool
+    {
+        if (!method_exists($this, $name)) {
+            return false;
+        }
+
+        $reflection = new ReflectionMethod($this, $name);
+
+        return $reflection->getDeclaringClass()->getName() !== self::class
+            && $reflection->getNumberOfParameters() === 0;
+    }
+
     public function __get($name)
     {
         if (array_key_exists($name, $this->attributes)) {
@@ -303,7 +316,7 @@ abstract class Model
             return $this->relations[$name];
         }
 
-        if (method_exists($this, $name)) {
+        if ($this->isRelationMethod($name)) {
             $result = $this->$name();
 
             if ($result instanceof Relations\Relation) {
