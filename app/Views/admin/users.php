@@ -18,7 +18,7 @@
                             <tr>
                                 <td><?= htmlspecialchars($adminUser['name'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars($adminUser['email'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><?= date('d/m/Y', strtotime($adminUser['created_at'])) ?></td>
+                                <td><?= (new DateTime($adminUser['created_at'], new DateTimeZone('UTC')))->format('d/m/Y') ?></td>
                                 <td class="text-end admin-actions">
                                     <a class="admin-action-link" href="/admin/users/<?= (int) $adminUser['id'] ?>/edit">Editar</a>
                                 </td>
