@@ -10,11 +10,12 @@ echo "\nModel\n";
 class Widget extends Model
 {
     protected $table = 'widgets';
-    protected $fillable = ['name', 'is_active', 'tags', 'price'];
+    protected $fillable = ['name', 'is_active', 'tags', 'price', 'scheduled_at'];
     protected $casts = [
         'is_active' => 'bool',
         'tags' => 'array',
         'price' => 'int',
+        'scheduled_at' => 'datetime',
     ];
     protected $uuidColumn = 'uuid';
 }
@@ -67,6 +68,13 @@ it('casts bool/array/int aplicam na leitura e na escrita', function (): void {
     assertSame(true, $widget->is_active);
     assertSame(['a', 'b'], $widget->tags);
     assertSame(10, $widget->price);
+});
+
+it('cast datetime trata string vazia como null, nao como "agora"', function (): void {
+    widgetFixture();
+    $widget = new Widget(['name' => 'Caixa', 'scheduled_at' => '']);
+
+    assertSame(null, $widget->scheduled_at);
 });
 
 it('save() faz INSERT numa instancia nova e preenche o id', function (): void {

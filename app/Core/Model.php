@@ -136,7 +136,7 @@ abstract class Model
                 $decoded = json_decode((string) $value, true);
                 return $decoded === null ? [] : $decoded;
             case 'datetime':
-                return new DateTime($value, new DateTimeZone('UTC'));
+                return $value === '' ? null : new DateTime($value, new DateTimeZone('UTC'));
             default:
                 return $value;
         }
