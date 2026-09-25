@@ -241,3 +241,162 @@ it('findByUuid() lanca excecao se a subclasse nao declarou $uuidColumn', functio
         WidgetWithoutUuid::findByUuid('qualquer-coisa');
     });
 });
+
+echo "\nModel relations\n";
+
+class Author extends Model
+{
+    protected $table = 'authors';
+    protected $fillable = ['name'];
+
+    public function books()
+    {
+        return $this->hasMany(Book::class, 'author_id');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'author_tag', 'author_id', 'tag_id');
+    }
+}
+
+class Book extends Model
+{
+    protected $table = 'books';
+    protected $fillable = ['title', 'author_id'];
+
+    public function author()
+    {
+        return $this->belongsTo(Author::class, 'author_id');
+    }
+
+    public function cover()
+    {
+        return $this->hasOne(Cover::class, 'book_id');
+    }
+}
+
+class Cover extends Model
+{
+    protected $table = 'covers';
+    protected $fillable = ['book_id', 'url'];
+}
+
+class Tag extends Model
+{
+    protected $table = 'tags';
+    protected $fillable = ['name'];
+}
+
+function authorBookFixture(): Database
+{
+    $database = testDatabase();
+    $database->connection()->exec(
+        'CREATE TABLE authors (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->connection()->exec(
+        'CREATE TABLE books (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            author_id INT UNSIGNED NOT NULL,
+            title VARCHAR(120) NOT NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->connection()->exec(
+        'CREATE TABLE covers (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            book_id INT UNSIGNED NOT NULL,
+            url VARCHAR(255) NOT NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->connection()->exec(
+        'CREATE TABLE tags (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->connection()->exec(
+        'CREATE TABLE author_tag (
+            author_id INT UNSIGNED NOT NULL,
+            tag_id INT UNSIGNED NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    Model::setConnection($database);
+
+    return $database;
+}
+
+it('hasMany: $author->books lista os livros do autor', function (): void {
+    authorBookFixture();
+    $author = Author::create(['name' => 'Machado']);
+    Book::create(['title' => 'Dom Casmurro', 'author_id' => $author->id]);
+    Book::create(['title' => 'Memorias Postumas', 'author_id' => $author->id]);
+    Book::create(['title' => 'Outro autor', 'author_id' => 999]);
+
+    $books = $author->books;
+
+    assertSame(2, count($books));
+});
+
+it('belongsTo: $book->author retorna o autor dono do livro', function (): void {
+    authorBookFixture();
+    $author = Author::create(['name' => 'Machado']);
+    $book = Book::create(['title' => 'Dom Casmurro', 'author_id' => $author->id]);
+
+    assertSame('Machado', $book->author->name);
+});
+
+it('hasOne: $book->cover retorna uma unica capa (ou null)', function (): void {
+    authorBookFixture();
+    $author = Author::create(['name' => 'Machado']);
+    $book = Book::create(['title' => 'Dom Casmurro', 'author_id' => $author->id]);
+    $withoutCover = Book::create(['title' => 'Sem capa', 'author_id' => $author->id]);
+    Cover::create(['book_id' => $book->id, 'url' => 'capa.png']);
+
+    assertSame('capa.png', $book->cover->url);
+    assertSame(null, $withoutCover->cover);
+});
+
+it('relacao via metodo permite encadear where() antes de buscar', function (): void {
+    authorBookFixture();
+    $author = Author::create(['name' => 'Machado']);
+    Book::create(['title' => 'Dom Casmurro', 'author_id' => $author->id]);
+    Book::create(['title' => 'Memorias Postumas', 'author_id' => $author->id]);
+
+    $filtered = $author->books()->where('title', 'Dom Casmurro')->get();
+
+    assertSame(1, count($filtered));
+});
+
+it('belongsToMany: attach/get/detach/sync gerenciam a tabela pivot', function (): void {
+    authorBookFixture();
+    $author = Author::create(['name' => 'Machado']);
+    $ficcao = Tag::create(['name' => 'Ficcao']);
+    $classico = Tag::create(['name' => 'Classico']);
+
+    $author->tags()->attach($ficcao->id);
+    $author->tags()->attach($ficcao->id);
+    $author->tags()->attach($classico->id);
+
+    $names = array_map(function (Tag $tag): string {
+        return $tag->name;
+    }, $author->tags()->get());
+    sort($names);
+    assertSame(['Classico', 'Ficcao'], $names);
+
+    $author->tags()->detach($classico->id);
+    assertSame(1, count($author->tags()->get()));
+
+    $author->tags()->sync([$ficcao->id, $classico->id]);
+    assertSame(2, count($author->tags()->get()));
+});
