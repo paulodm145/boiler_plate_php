@@ -26,6 +26,11 @@ class UserRepository
         return $this->database->fetchAll('SELECT id, name, email, created_at FROM users ORDER BY name');
     }
 
+    public function count(): int
+    {
+        return (int) $this->database->fetch('SELECT COUNT(*) AS total FROM users')['total'];
+    }
+
     public function find(int $id): ?array
     {
         return $this->database->fetch(

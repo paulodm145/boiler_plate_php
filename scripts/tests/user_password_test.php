@@ -128,3 +128,14 @@ it('lastInsertId retorna o id do ultimo INSERT', function (): void {
 
     assertSame(1, (int) $id, 'primeiro insert na tabela deveria gerar id 1');
 });
+
+it('count retorna o numero de usuarios sem buscar as linhas', function (): void {
+    $users = new UserRepository(usersFixture());
+
+    assertSame(0, $users->count());
+
+    $users->create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'segredo123']);
+    $users->create(['name' => 'Bia', 'email' => 'bia@exemplo.com', 'password' => 'segredo123']);
+
+    assertSame(2, $users->count());
+});

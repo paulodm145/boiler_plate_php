@@ -25,7 +25,7 @@ class AdminDashboardController
         View::render('admin/dashboard', [
             'title' => 'Painel | Admin',
             'user' => Auth::user(),
-            'userCount' => count((new UserRepository())->all()),
+            'userCount' => (new UserRepository())->count(),
             'pendingMigrationNames' => $pendingMigrationNames,
         ]);
     }
