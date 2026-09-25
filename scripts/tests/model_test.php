@@ -400,3 +400,55 @@ it('belongsToMany: attach/get/detach/sync gerenciam a tabela pivot', function ()
     $author->tags()->sync([$ficcao->id, $classico->id]);
     assertSame(2, count($author->tags()->get()));
 });
+
+echo "\nApp\\Models\\User\n";
+
+use App\Models\User;
+
+function realUsersFixture(): Database
+{
+    $database = testDatabase();
+    $database->connection()->exec(
+        'CREATE TABLE users (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL,
+            email VARCHAR(180) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    Model::setConnection($database);
+
+    return $database;
+}
+
+it('App\\Models\\User cria, busca, atualiza e apaga sobre a tabela users real', function (): void {
+    realUsersFixture();
+
+    $user = User::create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'hash']);
+    assertTrue($user->id > 0);
+
+    $found = User::where('email', 'ana@exemplo.com')->first();
+    assertSame('Ana', $found->name);
+
+    $found->name = 'Ana Maria';
+    $found->save();
+    assertSame('Ana Maria', User::find($found->id)->name);
+
+    $found->delete();
+    assertSame(null, User::find($found->id));
+});
+
+it('App\\Models\\User respeita $fillable (password nao aceita chave fora da allowlist)', function (): void {
+    realUsersFixture();
+
+    $user = User::create([
+        'name' => 'Ana',
+        'email' => 'ana@exemplo.com',
+        'password' => 'hash',
+        'id' => 999,
+    ]);
+
+    assertTrue($user->id !== 999, 'id nao esta em $fillable, o INSERT deveria gerar o proprio id');
+});
