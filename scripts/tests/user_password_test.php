@@ -116,3 +116,15 @@ it('deleteByEmail remove o usuario', function (): void {
 
     assertSame(null, $users->findByEmail('ana@exemplo.com'));
 });
+
+it('lastInsertId retorna o id do ultimo INSERT', function (): void {
+    $database = usersFixture();
+    $database->execute(
+        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
+        ['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'hash']
+    );
+
+    $id = $database->lastInsertId();
+
+    assertSame(1, (int) $id, 'primeiro insert na tabela deveria gerar id 1');
+});

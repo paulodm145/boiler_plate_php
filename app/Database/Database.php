@@ -46,6 +46,11 @@ class Database
         return $this->query($sql, $params)->rowCount() >= 0;
     }
 
+    public function lastInsertId(): string
+    {
+        return $this->pdo->lastInsertId();
+    }
+
     private function createConnection(): PDO
     {
         $connection = Env::get('DB_CONNECTION', 'mysql');
