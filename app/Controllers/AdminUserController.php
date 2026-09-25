@@ -33,6 +33,7 @@ class AdminUserController
             'user' => Auth::user(),
             'adminUser' => ['id' => null, 'name' => '', 'email' => ''],
             'isNew' => true,
+            'error' => null,
         ]);
     }
 
@@ -56,6 +57,7 @@ class AdminUserController
             'user' => Auth::user(),
             'adminUser' => $user,
             'isNew' => false,
+            'error' => null,
         ]);
     }
 
@@ -69,10 +71,19 @@ class AdminUserController
     {
         $currentUser = Auth::user();
 
-        if ((int) $currentUser['id'] !== (int) $id) {
-            $this->users->delete((int) $id);
+        if ((int) $currentUser['id'] === (int) $id) {
+            http_response_code(422);
+            View::render('admin/user-form', [
+                'title' => 'Editar usuario | Admin',
+                'user' => $currentUser,
+                'adminUser' => $this->users->find((int) $id),
+                'isNew' => false,
+                'error' => 'Voce nao pode excluir o proprio usuario.',
+            ]);
+            return;
         }
 
+        $this->users->delete((int) $id);
         header('Location: /admin/users');
     }
 }
