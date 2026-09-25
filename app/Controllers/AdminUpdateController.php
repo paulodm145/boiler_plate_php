@@ -38,7 +38,7 @@ class AdminUpdateController
             return;
         }
 
-        @set_time_limit(0);
+        set_time_limit(0);
 
         echo json_encode($this->migrator()->runNextPending());
     }

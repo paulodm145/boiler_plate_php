@@ -175,7 +175,7 @@ class InstallController
             return;
         }
 
-        @set_time_limit(0);
+        set_time_limit(0);
 
         $result = $this->migrator()->runNextPending();
 
@@ -273,7 +273,7 @@ class InstallController
         }
 
         $keyPath = $this->rootPath . '/.env.install';
-        $keyRemoved = !is_file($keyPath) || @unlink($keyPath);
+        $keyRemoved = !is_file($keyPath) || unlink($keyPath);
 
         $email = (string) ($_SESSION['install']['admin_email'] ?? '');
         unset($_SESSION['install']);
