@@ -1,0 +1,4 @@
+ALTER TABLE users ADD COLUMN uuid CHAR(36) NULL AFTER id;
+UPDATE users SET uuid = UUID() WHERE uuid IS NULL;
+ALTER TABLE users MODIFY COLUMN uuid CHAR(36) NOT NULL;
+ALTER TABLE users ADD UNIQUE KEY users_uuid_unique (uuid);

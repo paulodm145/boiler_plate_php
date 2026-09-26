@@ -3,7 +3,7 @@
             <?php if ($error !== null): ?>
                 <div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
-            <form method="post" action="<?= $isNew ? '/admin/users' : '/admin/users/' . (int) $adminUser['id'] . '/edit' ?>">
+            <form method="post" action="<?= $isNew ? '/admin/users' : '/admin/users/' . htmlspecialchars($adminUser['uuid'], ENT_QUOTES, 'UTF-8') . '/edit' ?>">
                 <?= \App\Core\Csrf::field() ?>
                 <div class="mb-3">
                     <label class="form-label" for="name">Nome</label>
@@ -30,7 +30,7 @@
                 </div>
             </form>
             <?php if (!$isNew): ?>
-                <form id="delete-user-form" method="post" action="/admin/users/<?= (int) $adminUser['id'] ?>/delete" onsubmit="return confirm('Excluir este usuario?');"><?= \App\Core\Csrf::field() ?></form>
+                <form id="delete-user-form" method="post" action="/admin/users/<?= htmlspecialchars($adminUser['uuid'], ENT_QUOTES, 'UTF-8') ?>/delete" onsubmit="return confirm('Excluir este usuario?');"><?= \App\Core\Csrf::field() ?></form>
             <?php endif; ?>
 <?php require __DIR__ . '/partials/shell-bottom.php'; ?>
 </body>

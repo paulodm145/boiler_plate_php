@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Uuid;
 use App\Database\Database;
 use App\Repositories\UserRepository;
 
@@ -13,6 +14,7 @@ function usersFixture(): Database
     $database->connection()->exec(
         'CREATE TABLE users (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            uuid CHAR(36) NOT NULL UNIQUE,
             name VARCHAR(120) NOT NULL,
             email VARCHAR(180) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
@@ -53,8 +55,8 @@ it('verifyPassword recusa a senha errada', function (): void {
 it('verifyPassword aceita hash md5 legado', function (): void {
     $database = usersFixture();
     $database->execute(
-        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
-        ['name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
+        'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
+        ['uuid' => Uuid::v4(), 'name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
     );
     $users = new UserRepository($database);
 
@@ -64,8 +66,8 @@ it('verifyPassword aceita hash md5 legado', function (): void {
 it('verifyPassword regrava o hash legado no formato novo', function (): void {
     $database = usersFixture();
     $database->execute(
-        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
-        ['name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
+        'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
+        ['uuid' => Uuid::v4(), 'name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
     );
     $users = new UserRepository($database);
     $users->verifyPassword('123456', $users->findByEmail('antigo@exemplo.com'));
@@ -79,8 +81,8 @@ it('verifyPassword regrava o hash legado no formato novo', function (): void {
 it('verifyPassword recusa senha errada contra hash md5 legado', function (): void {
     $database = usersFixture();
     $database->execute(
-        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
-        ['name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
+        'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
+        ['uuid' => Uuid::v4(), 'name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
     );
     $users = new UserRepository($database);
 
@@ -90,8 +92,8 @@ it('verifyPassword recusa senha errada contra hash md5 legado', function (): voi
 it('verifyPassword recusa o proprio digest md5 enviado como senha literal', function (): void {
     $database = usersFixture();
     $database->execute(
-        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
-        ['name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
+        'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
+        ['uuid' => Uuid::v4(), 'name' => 'Antigo', 'email' => 'antigo@exemplo.com', 'password' => md5('123456')]
     );
     $users = new UserRepository($database);
 
@@ -120,8 +122,8 @@ it('deleteByEmail remove o usuario', function (): void {
 it('lastInsertId retorna o id do ultimo INSERT', function (): void {
     $database = usersFixture();
     $database->execute(
-        'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
-        ['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'hash']
+        'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
+        ['uuid' => Uuid::v4(), 'name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'hash']
     );
 
     $id = $database->lastInsertId();

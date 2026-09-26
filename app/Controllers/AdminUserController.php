@@ -64,9 +64,9 @@ class AdminUserController
         header('Location: /admin/users');
     }
 
-    public function edit(string $id): void
+    public function edit(string $userUuid): void
     {
-        $user = $this->users->find((int) $id);
+        $user = $this->users->findByUuid($userUuid);
 
         if ($user === null) {
             ErrorPage::notFound();
@@ -83,17 +83,24 @@ class AdminUserController
         ]);
     }
 
-    public function update(string $id): void
+    public function update(string $userUuid): void
     {
+        $user = $this->users->findByUuid($userUuid);
+
+        if ($user === null) {
+            ErrorPage::notFound();
+            return;
+        }
+
         $name = trim((string) ($_POST['name'] ?? ''));
         $email = trim((string) ($_POST['email'] ?? ''));
-        $error = $this->validate($name, $email, (string) ($_POST['password'] ?? ''), (int) $id);
+        $error = $this->validate($name, $email, (string) ($_POST['password'] ?? ''), (int) $user['id']);
 
         if ($error !== null) {
             View::render('admin/user-form', [
                 'title' => 'Editar usuario | Admin',
                 'user' => Auth::user(),
-                'adminUser' => ['id' => (int) $id, 'name' => $name, 'email' => $email],
+                'adminUser' => ['id' => (int) $user['id'], 'uuid' => $userUuid, 'name' => $name, 'email' => $email],
                 'isNew' => false,
                 'error' => $error,
                 'pendingCount' => $this->pendingMigrationsCount(),
@@ -101,20 +108,27 @@ class AdminUserController
             return;
         }
 
-        $this->users->update((int) $id, $_POST);
+        $this->users->update((int) $user['id'], $_POST);
         header('Location: /admin/users');
     }
 
-    public function delete(string $id): void
+    public function delete(string $userUuid): void
     {
+        $user = $this->users->findByUuid($userUuid);
+
+        if ($user === null) {
+            ErrorPage::notFound();
+            return;
+        }
+
         $currentUser = Auth::user();
 
-        if ((int) $currentUser['id'] === (int) $id) {
+        if (($currentUser['uuid'] ?? null) === $userUuid) {
             http_response_code(422);
             View::render('admin/user-form', [
                 'title' => 'Editar usuario | Admin',
                 'user' => $currentUser,
-                'adminUser' => $this->users->find((int) $id),
+                'adminUser' => $user,
                 'isNew' => false,
                 'error' => 'Voce nao pode excluir o proprio usuario.',
                 'pendingCount' => $this->pendingMigrationsCount(),
@@ -122,7 +136,7 @@ class AdminUserController
             return;
         }
 
-        $this->users->delete((int) $id);
+        $this->users->delete((int) $user['id']);
         header('Location: /admin/users');
     }
 

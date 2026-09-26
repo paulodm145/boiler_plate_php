@@ -25,9 +25,9 @@ return function (Router $router): void {
     $router->get('/admin/users', [AdminUserController::class, 'index'], [RequireAuth::class]);
     $router->get('/admin/users/create', [AdminUserController::class, 'create'], [RequireAuth::class]);
     $router->post('/admin/users', [AdminUserController::class, 'store'], [VerifyCsrfToken::class, RequireAuth::class]);
-    $router->get('/admin/users/{id}/edit', [AdminUserController::class, 'edit'], [RequireAuth::class]);
-    $router->post('/admin/users/{id}/edit', [AdminUserController::class, 'update'], [VerifyCsrfToken::class, RequireAuth::class]);
-    $router->post('/admin/users/{id}/delete', [AdminUserController::class, 'delete'], [VerifyCsrfToken::class, RequireAuth::class]);
+    $router->get('/admin/users/{userUuid}/edit', [AdminUserController::class, 'edit'], [RequireAuth::class]);
+    $router->post('/admin/users/{userUuid}/edit', [AdminUserController::class, 'update'], [VerifyCsrfToken::class, RequireAuth::class]);
+    $router->post('/admin/users/{userUuid}/delete', [AdminUserController::class, 'delete'], [VerifyCsrfToken::class, RequireAuth::class]);
     $router->get('/admin/settings', [AdminSettingController::class, 'edit'], [RequireAuth::class]);
     $router->post('/admin/settings', [AdminSettingController::class, 'update'], [VerifyCsrfToken::class, RequireAuth::class]);
     $router->get('/admin/atualizar', [AdminUpdateController::class, 'show'], [RequireAuth::class]);

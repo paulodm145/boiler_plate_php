@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Core\Uuid;
 use App\Database\Database;
 
 class UserRepository
@@ -16,14 +17,22 @@ class UserRepository
     public function findByEmail(string $email): ?array
     {
         return $this->database->fetch(
-            'SELECT id, name, email, password FROM users WHERE email = :email LIMIT 1',
+            'SELECT id, uuid, name, email, password FROM users WHERE email = :email LIMIT 1',
             ['email' => $email]
+        );
+    }
+
+    public function findByUuid(string $uuid): ?array
+    {
+        return $this->database->fetch(
+            'SELECT id, uuid, name, email FROM users WHERE uuid = :uuid LIMIT 1',
+            ['uuid' => $uuid]
         );
     }
 
     public function all(): array
     {
-        return $this->database->fetchAll('SELECT id, name, email, created_at FROM users ORDER BY name');
+        return $this->database->fetchAll('SELECT id, uuid, name, email, created_at FROM users ORDER BY name');
     }
 
     public function count(): int
@@ -34,7 +43,7 @@ class UserRepository
     public function find(int $id): ?array
     {
         return $this->database->fetch(
-            'SELECT id, name, email FROM users WHERE id = :id LIMIT 1',
+            'SELECT id, uuid, name, email FROM users WHERE id = :id LIMIT 1',
             ['id' => $id]
         );
     }
@@ -42,8 +51,9 @@ class UserRepository
     public function create(array $data): void
     {
         $this->database->execute(
-            'INSERT INTO users (name, email, password) VALUES (:name, :email, :password)',
+            'INSERT INTO users (uuid, name, email, password) VALUES (:uuid, :name, :email, :password)',
             [
+                'uuid' => Uuid::v4(),
                 'name' => trim($data['name']),
                 'email' => trim($data['email']),
                 'password' => password_hash((string) $data['password'], PASSWORD_DEFAULT),

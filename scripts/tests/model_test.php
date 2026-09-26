@@ -445,6 +445,7 @@ function realUsersFixture(): Database
     $database->connection()->exec(
         'CREATE TABLE users (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            uuid CHAR(36) NOT NULL UNIQUE,
             name VARCHAR(120) NOT NULL,
             email VARCHAR(180) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
@@ -485,4 +486,13 @@ it('App\\Models\\User respeita $fillable (password nao aceita chave fora da allo
     ]);
 
     assertTrue($user->id !== 999, 'id nao esta em $fillable, o INSERT deveria gerar o proprio id');
+});
+
+it('App\\Models\\User gera o uuid automaticamente e permite buscar por ele', function (): void {
+    realUsersFixture();
+
+    $user = User::create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'hash']);
+
+    assertTrue(is_string($user->uuid) && strlen($user->uuid) === 36);
+    assertSame($user->id, User::findByUuid($user->uuid)->id);
 });
