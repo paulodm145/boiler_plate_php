@@ -31,5 +31,11 @@ return function (Router $router): void {
     $router->get('/admin/settings', [AdminSettingController::class, 'edit'], [RequireAuth::class]);
     $router->post('/admin/settings', [AdminSettingController::class, 'update'], [VerifyCsrfToken::class, RequireAuth::class]);
     $router->get('/admin/atualizar', [AdminUpdateController::class, 'show'], [RequireAuth::class]);
-    $router->post('/admin/atualizar/run', [AdminUpdateController::class, 'run'], [VerifyCsrfToken::class, RequireAuth::class]);
+    // Sem RequireAuth aqui de proposito: esta rota e so chamada via fetch()
+    // pelo polling de public/assets/js/migrate-progress.js, que trata
+    // especificamente um 401 JSON pra "sessao expirou" — RequireAuth
+    // devolveria um redirect HTML (fetch() segue automaticamente, quebrando
+    // o response.json() do JS). AdminUpdateController::run() ja faz o
+    // proprio Auth::check() + 401 JSON, e e o unico guardiao desta rota.
+    $router->post('/admin/atualizar/run', [AdminUpdateController::class, 'run'], [VerifyCsrfToken::class]);
 };

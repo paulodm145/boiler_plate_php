@@ -12,8 +12,6 @@ class AdminDashboardController
 {
     public function index(): void
     {
-        Auth::requireAuth();
-
         $pendingMigrationNames = [];
 
         try {

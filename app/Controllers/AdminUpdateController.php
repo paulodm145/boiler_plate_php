@@ -18,8 +18,6 @@ class AdminUpdateController
 
     public function show(): void
     {
-        Auth::requireAuth();
-
         View::render('admin/update', [
             'title' => 'Atualizar banco de dados | Admin',
             'user' => Auth::user(),
@@ -34,6 +32,9 @@ class AdminUpdateController
     {
         header('Content-Type: application/json; charset=utf-8');
 
+        // Unico guardiao desta rota (routes.php nao registra RequireAuth
+        // aqui de proposito) pra poder devolver 401 JSON em vez de um
+        // redirect HTML que quebraria o fetch() do polling.
         if (!Auth::check()) {
             http_response_code(401);
             echo json_encode(['error' => 'sessao_expirada']);

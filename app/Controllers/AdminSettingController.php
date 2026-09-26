@@ -13,7 +13,6 @@ class AdminSettingController
 
     public function __construct()
     {
-        Auth::requireAuth();
         $this->settings = new SettingRepository();
     }
 

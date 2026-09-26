@@ -15,7 +15,6 @@ class AdminUserController
 
     public function __construct()
     {
-        Auth::requireAuth();
         $this->users = new UserRepository();
         $this->rootPath = dirname(__DIR__, 2);
     }
