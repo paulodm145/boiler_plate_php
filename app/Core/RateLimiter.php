@@ -5,6 +5,7 @@ namespace App\Core;
 use App\Database\Database;
 use DateTime;
 use DateTimeZone;
+use PDOException;
 
 class RateLimiter
 {
@@ -24,6 +25,15 @@ class RateLimiter
         return self::$connection;
     }
 
+    // Leitura pura, sem incrementar -- util pra checagens informativas
+    // ("voce ja usou 4 de 5 tentativas") que nao devem contar como uma
+    // tentativa. NAO use isto como porta de bloqueio check-then-act: entre
+    // este SELECT e uma chamada de hit() feita depois pelo chamador, outra
+    // requisicao concorrente pode passar pela mesma checagem antes de
+    // qualquer uma das duas gravar sua tentativa, estourando o limite. Pra
+    // bloquear de forma segura sob concorrencia, use o valor devolvido por
+    // hit() (a escrita e a leitura da contagem acontecem atomicamente na
+    // mesma linha, via ON DUPLICATE KEY UPDATE + lock de linha do InnoDB).
     public static function tooManyAttempts(string $key, int $maxAttempts): bool
     {
         $row = self::connection()->fetch(
@@ -34,7 +44,12 @@ class RateLimiter
         return $row !== null && (int) $row['attempts'] >= $maxAttempts;
     }
 
-    public static function hit(string $key, int $decayMinutes): void
+    // Registra uma tentativa e devolve a contagem resultante -- o chamador
+    // compara esse numero com o proprio limite pra decidir se bloqueia,
+    // tudo derivado da mesma escrita atomica (ver o comentario em
+    // tooManyAttempts() sobre por que isto, e nao um check separado, e a
+    // forma segura de fechar a checagem+incremento sob concorrencia).
+    public static function hit(string $key, int $decayMinutes): int
     {
         $expiry = gmdate('Y-m-d H:i:s', time() + $decayMinutes * 60);
 
@@ -48,7 +63,28 @@ class RateLimiter
         );
 
         if (mt_rand(1, 50) === 1) {
+            self::cleanupExpired();
+        }
+
+        $row = self::connection()->fetch(
+            'SELECT attempts FROM rate_limits WHERE rate_key = :key LIMIT 1',
+            ['key' => $key]
+        );
+
+        return $row === null ? 1 : (int) $row['attempts'];
+    }
+
+    // Limpeza oportunista (~2% das chamadas de hit()) das linhas de
+    // qualquer chave que ja expiraram, sem depender de cron. E manutencao,
+    // nao parte da garantia de corretude do throttle: se falhar (lock wait,
+    // erro transiente), a proxima chamada de hit() com sorte tenta de novo
+    // -- nunca deve derrubar a tentativa de login que disparou o hit().
+    private static function cleanupExpired(): void
+    {
+        try {
             self::connection()->execute('DELETE FROM rate_limits WHERE expires_at < UTC_TIMESTAMP()');
+        } catch (PDOException $exception) {
+            return;
         }
     }
 

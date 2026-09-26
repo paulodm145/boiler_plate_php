@@ -42,6 +42,27 @@ it('hit() incrementa ate estourar o limite', function (): void {
     assertTrue(RateLimiter::tooManyAttempts($key, 5));
 });
 
+it('hit() devolve a contagem apos incrementar (base pro chamador fechar a checagem+incremento atomicamente)', function (): void {
+    rateLimitsFixture();
+    $key = 'login:1.2.3.4';
+
+    assertSame(1, RateLimiter::hit($key, 15));
+    assertSame(2, RateLimiter::hit($key, 15));
+    assertSame(3, RateLimiter::hit($key, 15));
+});
+
+it('hit() devolve 1 de novo quando a janela anterior ja expirou', function (): void {
+    $database = rateLimitsFixture();
+    $key = 'login:1.2.3.4';
+
+    $database->execute(
+        'INSERT INTO rate_limits (rate_key, attempts, expires_at) VALUES (:key, 5, :expired)',
+        ['key' => $key, 'expired' => gmdate('Y-m-d H:i:s', time() - 60)]
+    );
+
+    assertSame(1, RateLimiter::hit($key, 15));
+});
+
 it('hit() reseta a contagem quando a janela anterior ja expirou', function (): void {
     $database = rateLimitsFixture();
     $key = 'login:1.2.3.4';
@@ -104,4 +125,31 @@ it('availableInSeconds() e zero pra uma chave sem linha', function (): void {
     rateLimitsFixture();
 
     assertSame(0, RateLimiter::availableInSeconds('login:nunca-usada'));
+});
+
+it('availableInSeconds() e zero pra uma linha ja expirada, nao um valor negativo ou obsoleto', function (): void {
+    $database = rateLimitsFixture();
+    $key = 'login:1.2.3.4';
+
+    $database->execute(
+        'INSERT INTO rate_limits (rate_key, attempts, expires_at) VALUES (:key, 5, :expired)',
+        ['key' => $key, 'expired' => gmdate('Y-m-d H:i:s', time() - 60)]
+    );
+
+    assertSame(0, RateLimiter::availableInSeconds($key));
+});
+
+it('cleanupExpired() nao propaga excecao se a query falhar', function (): void {
+    rateLimitsFixture();
+
+    $method = new ReflectionMethod(RateLimiter::class, 'cleanupExpired');
+    $method->setAccessible(true);
+
+    // Derruba a tabela de proposito pra forcar um erro real de SQL na
+    // limpeza, sem depender da chance probabilistica de mt_rand() disparar.
+    RateLimiter::connection()->connection()->exec('DROP TABLE rate_limits');
+
+    $method->invoke(null);
+
+    assertTrue(true, 'cleanupExpired() nao deveria ter deixado a excecao escapar ate aqui');
 });

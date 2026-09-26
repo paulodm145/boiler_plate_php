@@ -90,3 +90,20 @@ it('login certo dentro do limite nao e bloqueado e limpa o contador', function (
     assertTrue(Auth::check(), 'login certo deveria autenticar a sessao');
     assertFalse(RateLimiter::tooManyAttempts('login:203.0.113.5', 5), 'login certo deveria ter limpado o contador de tentativas');
 });
+
+it('uma tentativa errada depois de um login certo comeca uma contagem nova, nao continua a antiga', function (): void {
+    [$controller, $users] = controllerWithTestUsersAndThrottle();
+    $users->create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'segredo123']);
+
+    attemptLogin($controller, 'ana@exemplo.com', 'senha-errada');
+    attemptLogin($controller, 'ana@exemplo.com', 'senha-errada');
+    attemptLogin($controller, 'ana@exemplo.com', 'segredo123');
+
+    for ($i = 0; $i < 5; $i++) {
+        $result = attemptLogin($controller, 'ana@exemplo.com', 'senha-errada');
+        assertSame(422, $result['status'], 'tentativa ' . ($i + 1) . ' da janela nova nao deveria estar bloqueada ainda');
+    }
+
+    $result = attemptLogin($controller, 'ana@exemplo.com', 'senha-errada');
+    assertSame(429, $result['status'], 'a 6a tentativa errada apos o sucesso deveria bloquear, contando do zero a partir do sucesso');
+});
