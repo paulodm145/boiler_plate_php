@@ -7,6 +7,7 @@ use App\Core\EnvWriter;
 use App\Core\InstallState;
 use App\Core\Migrator;
 use App\Core\Requirements;
+use App\Core\Validator;
 use App\Core\View;
 use App\Database\Database;
 use App\Repositories\UserRepository;
@@ -208,19 +209,19 @@ class InstallController
         $password = (string) ($_POST['password'] ?? '');
         $confirmation = (string) ($_POST['password_confirmation'] ?? '');
 
-        if ($values['name'] === '' || $values['email'] === '') {
+        if (!Validator::required($values['name']) || !Validator::required($values['email'])) {
             $this->renderAdmin($values, 'Informe o nome e o e-mail.');
 
             return;
         }
 
-        if (filter_var($values['email'], FILTER_VALIDATE_EMAIL) === false) {
+        if (!Validator::email($values['email'])) {
             $this->renderAdmin($values, 'Informe um e-mail valido.');
 
             return;
         }
 
-        if (strlen($password) < 8) {
+        if (!Validator::minLength($password, 8)) {
             $this->renderAdmin($values, 'A senha precisa de pelo menos 8 caracteres.');
 
             return;
