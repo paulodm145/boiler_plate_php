@@ -11,7 +11,8 @@
 // opcionais) e, dentro de cada <td> ordenavel, data-col="chave" e
 // data-value="valor bruto pra comparar" (numero pra colunas numericas/data,
 // string em minusculo pras demais). Cabecalhos ordenaveis sao
-// <button data-sort="chave"><i class="fa-solid fa-sort"></i></button>.
+// <button data-sort="chave"><span data-sort-icon></span></button> — o
+// conteudo do <span> e substituido por um dos 3 SVG inline abaixo.
 // Controles opcionais dentro do wrapper: [data-table-search] (input),
 // [data-table-filter="status"] (select), [data-table-page-size] (select,
 // 0 = todos), [data-table-info] (paragrafo de contagem),
@@ -19,6 +20,14 @@
 // pro estado "nada encontrado".
 (function () {
     'use strict';
+
+    // Mesmo path data de App\Core\Icon (fontawesome-free 6.5.2, solid),
+    // pra nao precisar de um round-trip ao servidor so pra trocar o icone.
+    var SORT_ICON_SVG = {
+        neutral: '<svg width="1em" height="1em" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true" focusable="false"><path d="M137.4 41.4c12.5-12.5 32.8-12.5 45.3 0l128 128c9.2 9.2 11.9 22.9 6.9 34.9s-16.6 19.8-29.6 19.8H32c-12.9 0-24.6-7.8-29.6-19.8s-2.2-25.7 6.9-34.9l128-128zm0 429.3l-128-128c-9.2-9.2-11.9-22.9-6.9-34.9s16.6-19.8 29.6-19.8H288c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-128 128c-12.5 12.5-32.8 12.5-45.3 0z"/></svg>',
+        up: '<svg width="1em" height="1em" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true" focusable="false"><path d="M182.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-9.2 9.2-11.9 22.9-6.9 34.9s16.6 19.8 29.6 19.8H288c12.9 0 24.6-7.8 29.6-19.8s2.2-25.7-6.9-34.9l-128-128z"/></svg>',
+        down: '<svg width="1em" height="1em" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true" focusable="false"><path d="M182.6 470.6c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-9.2-9.2-11.9-22.9-6.9-34.9s16.6-19.8 29.6-19.8H288c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-128 128z"/></svg>'
+    };
 
     function normalize(value) {
         return (value || '')
@@ -102,16 +111,16 @@
 
         function updateSortIcons() {
             sortButtons.forEach(function (button) {
-                var icon = button.querySelector('i');
+                var icon = button.querySelector('[data-sort-icon]');
 
                 if (!icon) {
                     return;
                 }
 
                 if (button.getAttribute('data-sort') === state.sortKey) {
-                    icon.className = 'fa-solid ' + (state.sortDir === 1 ? 'fa-sort-up' : 'fa-sort-down');
+                    icon.innerHTML = state.sortDir === 1 ? SORT_ICON_SVG.up : SORT_ICON_SVG.down;
                 } else {
-                    icon.className = 'fa-solid fa-sort';
+                    icon.innerHTML = SORT_ICON_SVG.neutral;
                 }
             });
         }

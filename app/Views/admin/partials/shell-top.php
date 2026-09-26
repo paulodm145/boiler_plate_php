@@ -1,11 +1,11 @@
-<?php $includeFontAwesome = true; require __DIR__ . '/head.php'; ?>
+<?php require __DIR__ . '/head.php'; ?>
 <body>
 <div class="admin-shell">
     <?php require __DIR__ . '/sidebar.php'; ?>
     <div class="admin-main">
         <div class="admin-topbar d-lg-none">
             <button class="admin-topbar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar" aria-controls="adminSidebar" aria-label="Abrir menu">
-                <i class="fa-solid fa-bars"></i>
+                <?= \App\Core\Icon::svg('bars') ?>
             </button>
             <span class="admin-topbar-brand">Admin</span>
         </div>

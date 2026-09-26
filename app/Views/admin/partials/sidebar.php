@@ -12,9 +12,9 @@ $isActive = function (string $prefix) use ($currentPath): bool {
 };
 
 $navItems = [
-    ['href' => '/admin', 'icon' => 'fa-gauge', 'label' => 'Painel', 'prefix' => '/admin'],
-    ['href' => '/admin/users', 'icon' => 'fa-users', 'label' => 'Usuários', 'prefix' => '/admin/users'],
-    ['href' => '/admin/settings', 'icon' => 'fa-gear', 'label' => 'Configurações', 'prefix' => '/admin/settings'],
+    ['href' => '/admin', 'icon' => 'gauge', 'label' => 'Painel', 'prefix' => '/admin'],
+    ['href' => '/admin/users', 'icon' => 'users', 'label' => 'Usuários', 'prefix' => '/admin/users'],
+    ['href' => '/admin/settings', 'icon' => 'gear', 'label' => 'Configurações', 'prefix' => '/admin/settings'],
 ];
 ?>
 <div class="offcanvas-lg offcanvas-start admin-sidebar" tabindex="-1" id="adminSidebar" aria-labelledby="adminSidebarLabel">
@@ -28,7 +28,7 @@ $navItems = [
             <?php foreach ($navItems as $navItem): ?>
                 <a class="admin-nav-link<?= $isActive($navItem['prefix']) ? ' active' : '' ?>" href="<?= $navItem['href'] ?>">
                     <span class="admin-nav-label">
-                        <i class="fa-solid <?= $navItem['icon'] ?> admin-nav-icon"></i>
+                        <?= \App\Core\Icon::svg($navItem['icon'], ['class' => 'admin-nav-icon']) ?>
                         <?= $navItem['label'] ?>
                     </span>
                     <?php if (!empty($navItem['badge'])): ?>
@@ -42,8 +42,9 @@ $navItems = [
                 <div class="admin-sidebar-user"><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
             <form method="post" action="/admin/logout">
+                <?= \App\Core\Csrf::field() ?>
                 <button class="btn btn-outline-light btn-sm w-100" type="submit">
-                    <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Sair
+                    <?= \App\Core\Icon::svg('arrow-right-from-bracket', ['class' => 'me-1']) ?> Sair
                 </button>
             </form>
         </div>

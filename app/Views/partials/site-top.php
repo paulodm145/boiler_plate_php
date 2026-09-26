@@ -56,7 +56,6 @@ $pageUrl = $canonical ?? $appUrl;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet" integrity="sha384-PPIZEGYM1v8zp5Py7UjFb79S58UeqCL9pYVnVPURKEqvioPROaVAJKKLzvH2rDnI" crossorigin="anonymous">
     <link href="/assets/css/site-theme.css?v=<?= Asset::version('assets/css/site-theme.css') ?>" rel="stylesheet">
 </head>
 <body>
@@ -70,8 +69,8 @@ $pageUrl = $canonical ?? $appUrl;
                 <div class="d-flex flex-column flex-md-row align-items-md-center gap-md-4 gap-2 py-3 py-md-0">
                     <a class="navlink<?= $active === 'home' ? ' active' : '' ?>" href="/">Início</a>
                     <button class="icon-btn" id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">
-                        <i class="fa-solid fa-sun" id="theme-icon-sun"></i>
-                        <i class="fa-solid fa-moon d-none" id="theme-icon-moon"></i>
+                        <?= \App\Core\Icon::svg('sun', ['id' => 'theme-icon-sun']) ?>
+                        <?= \App\Core\Icon::svg('moon', ['id' => 'theme-icon-moon', 'class' => 'd-none']) ?>
                     </button>
                 </div>
             </div>

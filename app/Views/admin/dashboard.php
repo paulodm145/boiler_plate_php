@@ -5,8 +5,8 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 mb-4">
-                <a class="btn btn-primary" href="/admin/users/create"><i class="fa-solid fa-plus me-1"></i> Novo usuário</a>
-                <a class="btn btn-outline-secondary" href="/admin/settings"><i class="fa-solid fa-gear me-1"></i> Configurações</a>
+                <a class="btn btn-primary" href="/admin/users/create"><?= \App\Core\Icon::svg('plus', ['class' => 'me-1']) ?> Novo usuário</a>
+                <a class="btn btn-outline-secondary" href="/admin/settings"><?= \App\Core\Icon::svg('gear', ['class' => 'me-1']) ?> Configurações</a>
             </div>
 
             <div class="row g-3 mb-4">
@@ -22,7 +22,7 @@
                 <div class="content-surface p-3 p-md-4 mb-4" style="border-color:#f0ad4e">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
-                            <h2 class="h6 mb-2"><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> <?= count($pendingMigrationNames) ?> migration(s) pendente(s)</h2>
+                            <h2 class="h6 mb-2"><?= \App\Core\Icon::svg('triangle-exclamation', ['class' => 'text-warning me-1']) ?> <?= count($pendingMigrationNames) ?> migration(s) pendente(s)</h2>
                             <ul class="mb-0 text-secondary small">
                                 <?php foreach (array_slice($pendingMigrationNames, 0, 5) as $migration): ?>
                                     <li><?= htmlspecialchars($migration, ENT_QUOTES, 'UTF-8') ?></li>
