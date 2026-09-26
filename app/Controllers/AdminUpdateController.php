@@ -49,6 +49,6 @@ class AdminUpdateController
 
     private function migrator(): Migrator
     {
-        return new Migrator(new Database(), $this->rootPath . '/database/migrations');
+        return new Migrator(Database::shared(), $this->rootPath . '/database/migrations');
     }
 }

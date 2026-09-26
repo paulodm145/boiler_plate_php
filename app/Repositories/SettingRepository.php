@@ -21,7 +21,7 @@ class SettingRepository
 
     public function __construct(?Database $database = null)
     {
-        $this->database = $database ?: new Database();
+        $this->database = $database ?: Database::shared();
     }
 
     public function all(): array

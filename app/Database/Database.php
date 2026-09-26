@@ -11,9 +11,29 @@ class Database
 {
     private $pdo;
 
+    private static $shared;
+
     public function __construct(?PDO $pdo = null)
     {
         $this->pdo = $pdo ?: $this->createConnection();
+    }
+
+    /**
+     * Uma unica conexao PDO reaproveitada por request, pra quem so precisa
+     * "a conexao real configurada no .env" (Repositories/Migrator sem
+     * Database injetado). Sem isso, cada `new Database()` abre seu proprio
+     * handshake MySQL — uma unica request admin podia abrir 2-3 conexoes
+     * (Migrator + UserRepository + o InstallState::pendingCount() do
+     * shell-top.php). Nunca use isto em teste — testes sempre injetam sua
+     * propria Database isolada, ligada ao banco de teste.
+     */
+    public static function shared(): self
+    {
+        if (self::$shared === null) {
+            self::$shared = new self();
+        }
+
+        return self::$shared;
     }
 
     public function connection(): PDO

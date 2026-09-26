@@ -41,7 +41,7 @@ abstract class Model
     public static function connection(): Database
     {
         if (self::$connection === null) {
-            self::$connection = new Database();
+            self::$connection = Database::shared();
         }
 
         return self::$connection;

@@ -11,7 +11,7 @@ class UserRepository
 
     public function __construct(?Database $database = null)
     {
-        $this->database = $database ?: new Database();
+        $this->database = $database ?: Database::shared();
     }
 
     public function findByEmail(string $email): ?array

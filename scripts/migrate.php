@@ -16,7 +16,7 @@ $autoloader->register();
 
 Env::load($rootPath . '/.env');
 
-$results = (new Migrator(new Database(), $rootPath . '/database/migrations'))->run();
+$results = (new Migrator(Database::shared(), $rootPath . '/database/migrations'))->run();
 
 foreach ($results as $result) {
     if ($result['status'] === 'executed') {

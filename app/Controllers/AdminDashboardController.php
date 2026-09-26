@@ -15,7 +15,7 @@ class AdminDashboardController
         $pendingMigrationNames = [];
 
         try {
-            $pendingMigrationNames = (new Migrator(new Database(), dirname(__DIR__, 2) . '/database/migrations'))->pending();
+            $pendingMigrationNames = (new Migrator(Database::shared(), dirname(__DIR__, 2) . '/database/migrations'))->pending();
         } catch (\Throwable $exception) {
             $pendingMigrationNames = [];
         }

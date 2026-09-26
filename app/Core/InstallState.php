@@ -41,7 +41,7 @@ class InstallState
         }
 
         try {
-            $migrator = new Migrator(new Database(), $this->rootPath . '/database/migrations');
+            $migrator = new Migrator(Database::shared(), $this->rootPath . '/database/migrations');
 
             return count($migrator->pending());
         } catch (\PDOException $error) {
