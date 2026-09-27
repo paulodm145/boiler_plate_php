@@ -24,6 +24,8 @@ return function (Router $router): void {
     $router->post('/admin/logout', [AdminAuthController::class, 'logout'], [VerifyCsrfToken::class]);
     $router->get('/admin/esqueci-senha', [AdminPasswordResetController::class, 'forgotForm']);
     $router->post('/admin/esqueci-senha', [AdminPasswordResetController::class, 'forgotSubmit'], [VerifyCsrfToken::class]);
+    $router->get('/admin/redefinir-senha/{token}', [AdminPasswordResetController::class, 'resetForm']);
+    $router->post('/admin/redefinir-senha/{token}', [AdminPasswordResetController::class, 'resetSubmit'], [VerifyCsrfToken::class]);
     $router->get('/admin', [AdminDashboardController::class, 'index'], [RequireAuth::class]);
     $router->get('/admin/users', [AdminUserController::class, 'index'], [RequireAuth::class]);
     $router->get('/admin/users/create', [AdminUserController::class, 'create'], [RequireAuth::class]);
