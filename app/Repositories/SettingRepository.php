@@ -17,6 +17,13 @@ class SettingRepository
     private $defaults = [
         'site_name' => 'App Boilerplate',
         'site_description' => 'Boilerplate de PHP puro (MVC hand-rolled, sem framework).',
+        'smtp_host' => '',
+        'smtp_port' => '587',
+        'smtp_encryption' => 'tls',
+        'smtp_username' => '',
+        'smtp_password' => '',
+        'smtp_from_address' => '',
+        'smtp_from_name' => 'App Boilerplate',
     ];
 
     public function __construct(?Database $database = null)
@@ -40,14 +47,33 @@ class SettingRepository
 
     public function update(array $data): void
     {
+        $current = $this->all();
+
         $settings = [
             'site_name' => $this->requiredText($data['site_name'] ?? '', $this->defaults['site_name']),
             'site_description' => trim((string) ($data['site_description'] ?? '')),
+            'smtp_host' => trim((string) ($data['smtp_host'] ?? '')),
+            'smtp_port' => trim((string) ($data['smtp_port'] ?? '')),
+            'smtp_encryption' => $this->smtpEncryption((string) ($data['smtp_encryption'] ?? '')),
+            'smtp_username' => trim((string) ($data['smtp_username'] ?? '')),
+            'smtp_password' => $this->smtpPassword((string) ($data['smtp_password'] ?? ''), $current['smtp_password']),
+            'smtp_from_address' => trim((string) ($data['smtp_from_address'] ?? '')),
+            'smtp_from_name' => $this->requiredText($data['smtp_from_name'] ?? '', $this->defaults['smtp_from_name']),
         ];
 
         foreach ($settings as $key => $value) {
             $this->set($key, $value);
         }
+    }
+
+    private function smtpEncryption(string $value): string
+    {
+        return in_array($value, ['tls', 'ssl', 'none'], true) ? $value : 'tls';
+    }
+
+    private function smtpPassword(string $submitted, string $current): string
+    {
+        return trim($submitted) !== '' ? trim($submitted) : $current;
     }
 
     private function set(string $key, string $value): void

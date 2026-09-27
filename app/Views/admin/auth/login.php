@@ -23,6 +23,7 @@
                         </div>
                         <button class="btn btn-primary w-100" type="submit">Entrar</button>
                     </form>
+                    <p class="text-center mt-3 mb-0"><a href="/admin/esqueci-senha">Esqueci minha senha</a></p>
                 </section>
             </div>
         </div>

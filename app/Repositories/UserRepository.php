@@ -86,6 +86,14 @@ class UserRepository
         $this->database->execute('DELETE FROM users WHERE id = :id', ['id' => $id]);
     }
 
+    public function updatePassword(int $id, string $plainPassword): void
+    {
+        $this->database->execute(
+            'UPDATE users SET password = :password WHERE id = :id',
+            ['password' => password_hash($plainPassword, PASSWORD_DEFAULT), 'id' => $id]
+        );
+    }
+
     public function verifyPassword(string $plain, array $user): bool
     {
         $hash = (string) ($user['password'] ?? '');
