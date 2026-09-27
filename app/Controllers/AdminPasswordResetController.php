@@ -51,6 +51,15 @@ class AdminPasswordResetController
         $email = trim($_POST['email'] ?? '');
         $user = $email !== '' ? $this->users->findByEmail($email) : null;
 
+        // A resposta e byte-identica exista ou nao a conta (testado), mas
+        // isto ainda deixa um canal por tempo: so o caminho do e-mail
+        // existente paga o custo sincrono de sendResetLink() (grava o
+        // token + fala com o servidor SMTP de verdade). Fechar isso direito
+        // exigiria enfileirar o envio pra rodar depois da resposta -- este
+        // boilerplate nao tem fila/job assincrono, e criar uma so pra isso
+        // seria escopo bem maior que o pedido. Aceito deliberadamente: o
+        // throttle acima (3 tentativas/15min por IP) ja limita bastante
+        // quantas medicoes de tempo um atacante consegue fazer.
         if ($user !== null) {
             $this->sendResetLink($email);
         }
@@ -114,6 +123,22 @@ class AdminPasswordResetController
         }
 
         $user = $this->users->findByEmail($reset['email']);
+
+        if ($user === null) {
+            // Linha de password_resets orfa: o usuario foi apagado (ou
+            // trocou de e-mail) depois do pedido de reset, dentro da
+            // janela de 60 min. Nada cascade-deleta esse token quando isso
+            // acontece, entao a linha pode sobreviver ao dono sumir.
+            $this->resets->deleteByToken($token);
+            View::render('admin/auth/reset-password', [
+                'title' => 'Redefinir senha | Admin',
+                'token' => $token,
+                'validToken' => false,
+                'error' => 'Este link e invalido ou ja expirou.',
+            ]);
+            return;
+        }
+
         $this->users->updatePassword((int) $user['id'], $password);
         $this->resets->deleteByToken($token);
 

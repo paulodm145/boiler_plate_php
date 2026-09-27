@@ -165,6 +165,20 @@ it('resetSubmit troca a senha, apaga o token, loga automaticamente, e o token na
     assertFalse($users->verifyPassword('segredo123', $updated));
 
     assertSame(null, $resets->findByToken($token), 'token deveria ter sido apagado apos o uso');
+
+    // Reenvia o MESMO token, de verdade, em vez de so checar que a linha
+    // sumiu do banco (isso ja e coberto por PasswordResetRepository::deleteByToken()
+    // em outro teste) -- prova que o controller de fato rejeita um replay,
+    // nao so que o dado foi apagado.
+    $_POST['password'] = 'outraSenha456';
+    $replay = callAction(function () use ($controller, $token): void {
+        $controller->resetSubmit($token);
+    });
+
+    assertContains('invalido ou ja expirou', $replay['body'], 'reenviar o mesmo token deveria ser rejeitado');
+
+    $afterReplay = $users->findByEmail('ana@exemplo.com');
+    assertTrue($users->verifyPassword('novaSenha123', $afterReplay), 'a senha do primeiro reset nao deveria ter sido trocada de novo pelo replay');
 });
 
 it('resetSubmit rejeita senha curta, reexibe o form, e nao troca a senha', function (): void {
@@ -197,6 +211,26 @@ it('resetSubmit com token invalido nao altera nenhuma senha', function (): void 
 
     $unchanged = $users->findByEmail('ana@exemplo.com');
     assertTrue($users->verifyPassword('segredo123', $unchanged));
+});
+
+it('resetSubmit com token valido mas usuario ja apagado mostra link invalido, sem lancar excecao', function (): void {
+    [$controller, $users, $resets, $mailer] = controllerWithTestRepositories();
+    $users->create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'segredo123']);
+    $token = bin2hex(random_bytes(32));
+    $resets->create('ana@exemplo.com', hash('sha256', $token), 60);
+
+    // Simula o dono do token sendo apagado depois do pedido de reset,
+    // dentro da janela de 60 min -- nada cascade-deleta password_resets.
+    $users->deleteByEmail('ana@exemplo.com');
+
+    $_POST['password'] = 'novaSenha123';
+    $result = callAction(function () use ($controller, $token): void {
+        $controller->resetSubmit($token);
+    });
+
+    assertContains('invalido ou ja expirou', $result['body']);
+    assertFalse(Auth::check(), 'nao deveria autenticar uma sessao pra um usuario que nao existe mais');
+    assertSame(null, $resets->findByToken($token), 'a linha orfa deveria ter sido limpa');
 });
 
 it('bloqueia a 4a tentativa de submit de reset no mesmo IP', function (): void {
