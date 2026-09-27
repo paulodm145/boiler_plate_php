@@ -141,3 +141,15 @@ it('count retorna o numero de usuarios sem buscar as linhas', function (): void 
 
     assertSame(2, $users->count());
 });
+
+it('updatePassword troca o hash da senha', function (): void {
+    $users = new UserRepository(usersFixture());
+    $users->create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'segredo123']);
+    $user = $users->findByEmail('ana@exemplo.com');
+
+    $users->updatePassword((int) $user['id'], 'senhaNova456');
+
+    $updated = $users->findByEmail('ana@exemplo.com');
+    assertTrue($users->verifyPassword('senhaNova456', $updated));
+    assertFalse($users->verifyPassword('segredo123', $updated));
+});
