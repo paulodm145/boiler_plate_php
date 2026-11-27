@@ -32,17 +32,18 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 - [x] CLAUDE.md: PHP 8.2, a política do QueryBuilder e a documentação de `Model`/`Relations`, que existem mas não estão documentados.
 
 ### Fase 2 — Helpers PHP (`App\Helpers`, puros)
-- [ ] Texto, arrays e números: `Str`, `Arr`, `Number`, `Text` (unificando com `Core\Text`), `Mask`, `Lgpd`.
-- [ ] Brasil: `Br\Cpf`, **`Br\Cnpj` alfanumérico**, `Br\Cep`, `Br\Phone`, unindo os formatos do `Core\Br` do lorencine (moeda, decimal e data).
-- [ ] Datas e dinheiro: `DateOnly`, `DateFormat`, `LocalTime`, `Duration`, `MoneyFormat`.
-- [ ] Entrada e saída: `Input` (`money("1.234,56")` → centavos sem passar por float, decimal, peso e data BR → `Y-m-d`), `JsonResponse`, `Url`, `Asset`.
-- [ ] Segurança: `HtmlSanitizer`, `FileName`, `ContentDisposition`, `Color`, `Uuid`.
-- [ ] Função global `e()`.
-- [ ] *A decidir no design:* quais helpers ganham teste. O mydaily dispensou testes nos helpers "estilo Laravel" (D-25), mas os validadores BR provavelmente devem ter.
+- [x] Texto, arrays e números: `Str`, `Arr`, `Number`, `Text` (unificando com `Core\Text`), `Mask`, `Lgpd`.
+- [x] Brasil: `Br\Cpf`, **`Br\Cnpj` alfanumérico**, `Br\Cep`, `Br\Phone`, unindo os formatos do `Core\Br` do lorencine (moeda, decimal e data).
+- [x] Datas e dinheiro: `DateOnly`, `DateFormat`, `LocalTime`, `Duration`, `MoneyFormat`.
+- [x] Entrada e saída: `Input` (`money("1.234,56")` → centavos sem passar por float, decimal, peso e data BR → `Y-m-d`) `Url`, `Asset` (`JsonResponse` foi para a fase 3).
+- [x] Segurança: `HtmlSanitizer`, `Color`, `Uuid` (`FileName` e `ContentDisposition` foram para a fase 4).
+- [x] Função global `e()`.
+- [x] Testes: nenhum para os helpers simples (decisão do dono, 2026-11-27).
 
 ### Fase 3 — Camadas, validação e paginação
 - [ ] Regra das camadas no CLAUDE.md, com tabela do que pode e do que não pode, mais `ServiceResult`.
 - [ ] `Database::transaction()` reentrante (mydaily).
+- [ ] `JsonResponse` (mydaily), que mapeia `ServiceResult` para status HTTP.
 - [ ] `FormRequest` com `rules()`, `messages()`, `validated()`, erros por campo, resumo e `old()`. Falha no form volta para o formulário; falha na API responde 422 em JSON.
 - [ ] `Validator` com regras por pipe, substituindo o `Core\Validator` atual:
   - gerais: `required`, `nullable`, `string`, `email`, `min`, `max`, `between`, `in`, `numeric`, `integer`, `regex`, `confirmed`, `same`, `date`, `before`, `after`, `unique`, `exists`, `file`, `mimes` (pelo conteúdo), `max_size`;
@@ -53,7 +54,7 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 
 ### Fase 4 — Infraestrutura
 - [ ] **E-mail:** classes `Mailable` (destinatário, assunto, view e dados), `Mailer` com `SmtpMailer` (PHPMailer) e `NullMailer`/log para dev e testes, templates em `Views/emails/` com `_layout`. A recuperação de senha passa a usar isso.
-- [ ] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
+- [ ] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean`, `ContentDisposition` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
 - [ ] **Exportação:** base `Export` (Template Method), `CsvExport` (BOM, `;` e proteção contra fórmula), `PdfExport` (FPDF vendorizado em `lib/fpdf`) e `XlsxExport` (o `XlsxWriter` do lorencine adaptado à base). Guia em `docs/exportacao.md`.
 
 ### Fase 5 — API
