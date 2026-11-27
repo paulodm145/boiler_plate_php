@@ -35,18 +35,22 @@ class SmtpMailer implements MailerInterface
         $this->settings = $settings ?: new SettingRepository();
     }
 
-    /** Configuracao de settings com as variaveis SMTP_* do .env por cima (as que existirem). */
+    /** Configuracao de settings com as variaveis SMTP_* do .env por cima (as que valem, ver envOverrides()). */
     public static function resolveConfig(array $settings): array
     {
-        foreach (self::ENV_KEYS as $settingKey => $envKey) {
-            $value = Env::get($envKey);
+        $overrides = self::envOverrides();
 
-            if ($value !== null && $value !== '') {
-                $settings[$settingKey] = $value;
-            }
+        if (isset($overrides['smtp_password'])) {
+            // Senha do .env: a conexao inteira sai do .env, nunca da tela. Senao,
+            // quem edita a tela trocaria o host e receberia a senha do servidor.
+            $settings['smtp_port'] = '587';
+            $settings['smtp_encryption'] = 'tls';
         }
 
-        $settings['smtp_encryption'] = in_array($settings['smtp_encryption'] ?? '', ['tls', 'ssl', 'none'], true)
+        $settings = array_merge($settings, $overrides);
+
+        $allowed = isset($overrides['smtp_password']) ? ['tls', 'ssl'] : ['tls', 'ssl', 'none'];
+        $settings['smtp_encryption'] = in_array($settings['smtp_encryption'] ?? '', $allowed, true)
             ? $settings['smtp_encryption']
             : 'tls';
 
@@ -56,7 +60,32 @@ class SmtpMailer implements MailerInterface
     /** @return string[] chaves de settings que estao vindo do .env */
     public static function envOverriddenKeys(): array
     {
-        return array_keys(array_filter(self::ENV_KEYS, static fn (string $envKey): bool => (string) Env::get($envKey, '') !== ''));
+        return array_keys(self::envOverrides());
+    }
+
+    /**
+     * Variaveis SMTP_* preenchidas, por chave de settings. SMTP_PASSWORD so vale
+     * junto com SMTP_HOST: sem host no .env a senha do .env e ignorada.
+     *
+     * @return array<string, string>
+     */
+    private static function envOverrides(): array
+    {
+        $overrides = [];
+
+        foreach (self::ENV_KEYS as $settingKey => $envKey) {
+            $value = (string) Env::get($envKey, '');
+
+            if ($value !== '') {
+                $overrides[$settingKey] = $value;
+            }
+        }
+
+        if (isset($overrides['smtp_password']) && !isset($overrides['smtp_host'])) {
+            unset($overrides['smtp_password']);
+        }
+
+        return $overrides;
     }
 
     public function send(string $to, string $subject, string $body): bool
