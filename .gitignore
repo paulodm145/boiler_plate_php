@@ -13,13 +13,6 @@
 
 /.superpowers/
 
-# Notas internas de planejamento (specs/plans) geradas durante o
-# desenvolvimento assistido — nao sao documentacao do projeto.
-/docs/superpowers/plans/*
-!/docs/superpowers/plans/.gitkeep
-/docs/superpowers/specs/*
-!/docs/superpowers/specs/.gitkeep
-
 # Artefatos locais de ferramentas de IA/agentes — estado de sessao, nao
 # conteudo do projeto. As skills em .claude/skills e .agents/skills ficam
 # versionadas de proposito, pra qualquer projeto derivado deste boilerplate
