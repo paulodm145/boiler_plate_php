@@ -7,7 +7,8 @@
 /database/*.sql
 /vendor/
 /node_modules/
-/storage/logs/
+/storage/logs/*
+!/storage/logs/.gitkeep
 /.idea/
 /.vscode/
 
