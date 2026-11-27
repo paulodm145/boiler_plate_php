@@ -22,14 +22,14 @@ O mydaily e o lorencine (`~/Projetos/mydaily`, `~/Projetos/lorencine/sistema`) n
 Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte verde no PHP 8.2 e CLAUDE.md atualizado no mesmo merge.
 
 ### Fase 1 — Base e correções
-- [ ] Docker em PHP 8.2 (tomando como base o `Dockerfile`/compose do lorencine), mantendo as portas 8002/3308.
-- [ ] **`Csrf` + `VerifyCsrfToken`**, que estão faltando hoje: o `routes.php` usa a classe e o login quebra com erro fatal. Origem: mydaily, via lorencine `892f129`. O `migrate-progress.js` passa a enviar `X-CSRF-Token`.
-- [ ] `.htaccess` da raiz bloqueando `lib/`, `docs/`, `docker/`, `routes.php`, arquivos ocultos e `*.md` (lorencine `faebe28`).
-- [ ] SMTP pelo `.env` (`SMTP_*`), com precedência campo a campo sobre a tela de Configurações (lorencine `8665116`).
-- [ ] `Logger` + `ErrorHandler` (mydaily): log diário com chaves sensíveis ocultas e página 500 com `request_id`.
-- [ ] `SecurityHeaders` básicos (mydaily). Se entra CSP com nonce é decidido no design da fase 6.
-- [ ] Instalador: administrador opcional quando já há usuários (lorencine `19bbfb8`).
-- [ ] CLAUDE.md: PHP 8.2, a política do QueryBuilder e a documentação de `Model`/`Relations`, que existem mas não estão documentados.
+- [x] Docker em PHP 8.2 (tomando como base o `Dockerfile`/compose do lorencine), mantendo as portas 8002/3308.
+- [x] **`Csrf` + `VerifyCsrfToken`**, que estão faltando hoje: o `routes.php` usa a classe e o login quebra com erro fatal. Origem: mydaily, via lorencine `892f129`. O `migrate-progress.js` passa a enviar `X-CSRF-Token`.
+- [x] `.htaccess` da raiz bloqueando `lib/`, `docs/`, `docker/`, `routes.php`, arquivos ocultos e `*.md` (lorencine `faebe28`).
+- [x] SMTP pelo `.env` (`SMTP_*`), com precedência campo a campo sobre a tela de Configurações (lorencine `8665116`).
+- [x] `Logger` + `ErrorHandler` (mydaily): log diário com chaves sensíveis ocultas e página 500 com `request_id`.
+- [x] `SecurityHeaders` básicos (mydaily). Se entra CSP com nonce é decidido no design da fase 6.
+- [x] Instalador: administrador opcional quando já há usuários (lorencine `19bbfb8`).
+- [x] CLAUDE.md: PHP 8.2, a política do QueryBuilder e a documentação de `Model`/`Relations`, que existem mas não estão documentados.
 
 ### Fase 2 — Helpers PHP (`App\Helpers`, puros)
 - [ ] Texto, arrays e números: `Str`, `Arr`, `Number`, `Text` (unificando com `Core\Text`), `Mask`, `Lgpd`.

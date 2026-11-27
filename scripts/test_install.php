@@ -179,6 +179,7 @@ require_once __DIR__ . '/tests/log_path_test.php';
 require_once __DIR__ . '/tests/logger_test.php';
 require_once __DIR__ . '/tests/error_handler_test.php';
 require_once __DIR__ . '/tests/security_headers_test.php';
+require_once __DIR__ . '/tests/ascii_identifiers_test.php';
 
 foreach ($GLOBALS['test_temp_dirs'] as $dir) {
     removeDir($dir);
