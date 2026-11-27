@@ -171,6 +171,7 @@ require_once __DIR__ . '/tests/rate_limiter_test.php';
 require_once __DIR__ . '/tests/admin_auth_throttle_test.php';
 require_once __DIR__ . '/tests/setting_repository_test.php';
 require_once __DIR__ . '/tests/mailer_test.php';
+require_once __DIR__ . '/tests/mail_test.php';
 require_once __DIR__ . '/tests/password_reset_repository_test.php';
 require_once __DIR__ . '/tests/admin_password_reset_test.php';
 require_once __DIR__ . '/tests/password_reset_service_test.php';

@@ -12,7 +12,7 @@ function resetServiceFixture(): array
 {
     [, $users, $resets, $mailer] = controllerWithTestRepositories();
 
-    return [new PasswordResetService($users, $resets, $mailer), $users, $resets, $mailer];
+    return [new PasswordResetService($users, $resets), $users, $resets, $mailer];
 }
 
 it('requestLink de e-mail existente grava o token e envia; inexistente nao envia', function (): void {
@@ -22,9 +22,10 @@ it('requestLink de e-mail existente grava o token e envia; inexistente nao envia
     $service->requestLink('ana@exemplo.com');
     $service->requestLink('ninguem@exemplo.com');
 
-    assertSame(1, count($mailer->sent));
-    assertSame('ana@exemplo.com', $mailer->sent[0]['to']);
-    preg_match('#/admin/redefinir-senha/([0-9a-f]{64})#', $mailer->sent[0]['body'], $match);
+    assertSame(1, count($mailer->messages));
+    assertSame('ana@exemplo.com', $mailer->messages[0]->to[0]['address']);
+    assertSame('Redefinição de senha', $mailer->messages[0]->subject);
+    preg_match('#/admin/redefinir-senha/([0-9a-f]{64})#', $mailer->messages[0]->text, $match);
     assertTrue($service->isValidToken($match[1]));
 });
 
