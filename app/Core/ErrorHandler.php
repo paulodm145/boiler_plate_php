@@ -73,6 +73,13 @@ class ErrorHandler
     {
         Logger::error($exception->getMessage(), ['exception' => $exception]);
 
+        if (PHP_SAPI === 'cli') {
+            // Script (migrate.php, cron): causa no stderr e saida != 0, nunca a pagina HTML.
+            self::writeToStderr(get_class($exception) . ': ' . $exception->getMessage()
+                . ' (' . $exception->getFile() . ':' . $exception->getLine() . ')');
+            exit(1);
+        }
+
         if (Env::get('APP_DEBUG', 'false') === 'true' && PHP_SAPI !== 'cli') {
             if (!headers_sent()) {
                 http_response_code(500);
@@ -105,6 +112,8 @@ class ErrorHandler
         ]);
 
         if (PHP_SAPI === 'cli') {
+            self::writeToStderr($error['message'] . ' (' . $error['file'] . ':' . $error['line'] . ')');
+
             return;
         }
 
@@ -119,6 +128,11 @@ class ErrorHandler
         }
 
         ErrorPage::serverError();
+    }
+
+    private static function writeToStderr(string $text): void
+    {
+        file_put_contents('php://stderr', $text . PHP_EOL);
     }
 
     private static function printDetail(string $text): void

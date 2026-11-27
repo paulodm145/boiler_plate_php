@@ -63,3 +63,25 @@ it('na web os erros so aparecem na tela com APP_DEBUG; senao vao so para o log',
         ini_set('display_errors', (string) $before);
     }
 });
+
+it('no CLI uma excecao vai para o stderr com codigo de saida 1, sem HTML', function (): void {
+    // scripts/migrate.php registra o ErrorHandler: com o banco fora do ar ele
+    // nao pode imprimir a pagina 500 e sair com 0 (deploy acharia que deu certo).
+    $root = dirname(__DIR__, 2);
+    $script = tempDir() . '/boom.php';
+    file_put_contents($script, '<?php require ' . var_export($root . '/app/Core/Autoloader.php', true) . ';'
+        . '(new App\Core\Autoloader(' . var_export($root . '/app', true) . '))->register();'
+        . 'App\Core\ErrorHandler::register(sys_get_temp_dir());'
+        . 'throw new RuntimeException("banco fora do ar");');
+
+    $process = proc_open([PHP_BINARY, $script], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    $exitCode = proc_close($process);
+
+    assertSame(1, $exitCode);
+    assertContains('RuntimeException: banco fora do ar', $stderr);
+    assertFalse(stripos($stdout, '<html') !== false || stripos($stdout, '<!doctype') !== false, 'sem pagina HTML no stdout');
+});
