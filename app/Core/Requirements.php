@@ -20,6 +20,9 @@ class Requirements
             $this->extension('pdo_mysql', true),
             $this->extension('mbstring', true),
             $this->extension('dom', true),
+            // Nao fatais: sem elas so a exportacao em Excel (zip) e a checagem de tipo dos uploads (fileinfo) param.
+            $this->extension('zip', false),
+            $this->extension('fileinfo', false),
             $this->writable($this->rootPath, 'Raiz gravavel', 'Necessario para gravar o arquivo .env.', true),
             $this->writable($this->rootPath . '/storage/uploads', 'Pasta storage/uploads gravavel', 'Guarda anexos e uploads da aplicacao.', false),
         ];
