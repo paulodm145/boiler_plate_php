@@ -4,7 +4,7 @@ namespace App\Core;
 
 class Requirements
 {
-    private const MINIMUM_PHP = '7.2.0';
+    private const MINIMUM_PHP = '8.2.0';
 
     private $rootPath;
 
