@@ -196,6 +196,26 @@ class InstallController
         $this->renderAdmin(['name' => '', 'email' => ''], null);
     }
 
+    // Quando o banco ja tem usuarios (ex.: restaurado de um backup ou
+    // importado de outro sistema), o administrador e opcional: da pra
+    // concluir sem criar outra conta.
+    public function skipAdmin(): void
+    {
+        if (!$this->requireStep('migrated', '/install/migrate')) {
+            return;
+        }
+
+        if ((new UserRepository())->count() === 0) {
+            $this->renderAdmin(['name' => '', 'email' => ''], 'Nenhum usuario cadastrado. Crie o administrador.');
+
+            return;
+        }
+
+        $_SESSION['install']['admin_email'] = '';
+        $_SESSION['install']['admin_created'] = true;
+        $this->redirect('/install/done');
+    }
+
     public function saveAdmin(): void
     {
         if (!$this->requireStep('migrated', '/install/migrate')) {
@@ -295,6 +315,7 @@ class InstallController
             'step' => 4,
             'values' => $values,
             'error' => $error,
+            'existingUsers' => (new UserRepository())->count(),
         ]);
     }
 

@@ -2,6 +2,7 @@
 
 /** @var array $values */
 /** @var string|null $error */
+/** @var int $existingUsers */
 
 $field = function (string $key) use ($values): string {
     return htmlspecialchars((string) ($values[$key] ?? ''), ENT_QUOTES, 'UTF-8');
@@ -10,7 +11,17 @@ $field = function (string $key) use ($values): string {
 ob_start();
 ?>
 <h2>Conta de administrador</h2>
-<p>Esta e a conta que voce usara para entrar no painel.</p>
+<?php if ($existingUsers > 0): ?>
+    <p>O banco ja tem <strong><?= $existingUsers ?> usuario(s)</strong> . Voce pode concluir sem criar outro administrador, ou cadastrar um novo abaixo.</p>
+    <form method="post" action="/install/admin/skip">
+        <div class="actions">
+            <button type="submit" class="button">Concluir sem criar administrador</button>
+        </div>
+    </form>
+    <hr>
+<?php else: ?>
+    <p>Esta e a conta que voce usara para entrar no painel.</p>
+<?php endif; ?>
 
 <?php if ($error !== null): ?>
     <p class="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
