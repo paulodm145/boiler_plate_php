@@ -18,3 +18,4 @@
                 </div>
             <?php endif; ?>
             <section class="content-surface p-4 p-md-5">
+                <?php require __DIR__ . '/flash.php'; ?>
