@@ -41,16 +41,16 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 - [x] Testes: nenhum para os helpers simples (decisão do dono, 2026-11-27).
 
 ### Fase 3 — Camadas, validação e paginação
-- [ ] Regra das camadas no CLAUDE.md, com tabela do que pode e do que não pode, mais `ServiceResult`.
-- [ ] `Database::transaction()` reentrante (mydaily).
-- [ ] `JsonResponse` (mydaily), que mapeia `ServiceResult` para status HTTP.
-- [ ] `FormRequest` com `rules()`, `messages()`, `validated()`, erros por campo, resumo e `old()`. Falha no form volta para o formulário; falha na API responde 422 em JSON.
-- [ ] `Validator` com regras por pipe, substituindo o `Core\Validator` atual:
+- [x] Regra das camadas no CLAUDE.md, com tabela do que pode e do que não pode, mais `ServiceResult`.
+- [x] `Database::transaction()` reentrante (mydaily).
+- [x] `JsonResponse` (mydaily), que mapeia `ServiceResult` para status HTTP.
+- [x] `FormRequest` com `rules()`, `messages()`, `validated()`, erros por campo, resumo e `old()`. Falha no form volta para o formulário; falha na API responde 422 em JSON.
+- [x] `Validator` com regras por pipe, substituindo o `Core\Validator` atual:
   - gerais: `required`, `nullable`, `string`, `email`, `min`, `max`, `between`, `in`, `numeric`, `integer`, `regex`, `confirmed`, `same`, `date`, `before`, `after`, `unique`, `exists`, `file`, `mimes` (pelo conteúdo), `max_size`;
   - **BR:** `cpf`, `cnpj` (alfanumérico), `cep`, `phone`, `date_br` (`dd/mm/aaaa`), `money` (`1.234,56`), `decimal_br`, `weight`.
-- [ ] `Flash` (lorencine) e partials de erro por campo (`is-invalid` + `invalid-feedback`) e do resumo.
-- [ ] **Classe padrão de paginação e listagem:** parâmetros uniformes (`page`, `per_page` com lista permitida, `sort` com colunas permitidas, `dir`, `q`). Funciona com o QueryBuilder e com SQL puro e devolve itens + meta. Une o `Paginator`/`Grid` do lorencine e o `skip/take` do mydaily. Inclui as partials de paginação e de "exibir N" e o `live-grid.js` (lorencine).
-- [ ] Reescrever como exemplo: usuários, configurações, recuperação de senha e instalador, todos em Controller → FormRequest → Service.
+- [x] `Flash` (lorencine) e partials de erro por campo (`is-invalid` + `invalid-feedback`) e do resumo.
+- [x] **Classe padrão de paginação e listagem:** parâmetros uniformes (`page`, `per_page` com lista permitida, `sort` com colunas permitidas, `dir`, `q`). Funciona com o QueryBuilder e com SQL puro e devolve itens + meta. Une o `Paginator`/`Grid` do lorencine e o `skip/take` do mydaily. Inclui as partials de paginação e de "exibir N" e o `live-grid.js` (lorencine).
+- [x] Reescrever como exemplo: usuários, configurações e recuperação de senha em Controller → FormRequest → Service (o instalador só trocou o validador).
 
 ### Fase 4 — Infraestrutura
 - [ ] **E-mail:** classes `Mailable` (destinatário, assunto, view e dados), `Mailer` com `SmtpMailer` (PHPMailer) e `NullMailer`/log para dev e testes, templates em `Views/emails/` com `_layout`. A recuperação de senha passa a usar isso.
