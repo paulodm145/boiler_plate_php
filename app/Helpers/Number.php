@@ -57,16 +57,17 @@ final class Number
         return preg_replace('/,0+$/', '', $formatted) . $suffix;
     }
 
-    /** "1.234,56" => 1234.56; aceita tambem "1234.56". null se nao for numero. */
+    /**
+     * Numero no formato brasileiro (o mesmo que format() escreve) => float, para conta e
+     * exibicao: "1.234,56" => 1234.56, "1.234" => 1234.0, "1.5" => 1.5. null se nao for
+     * numero. Para gravar, use Input::decimal() (string, sem float).
+     */
     public static function parse(string $value): ?float
     {
-        $clean = preg_replace('/[^\d,.\-]/', '', $value);
+        // Como antes: simbolos e espacos saem ("R$ 1.234,56", "50 %").
+        $decimal = Input::decimal((string) preg_replace('/[^\d,.\-]/', '', $value), 20);
 
-        if (str_contains($clean, ',')) {
-            $clean = str_replace(['.', ','], ['', '.'], $clean);
-        }
-
-        return is_numeric($clean) ? (float) $clean : null;
+        return $decimal === null ? null : (float) $decimal;
     }
 
     public static function clamp(int|float $value, int|float $min, int|float $max): int|float

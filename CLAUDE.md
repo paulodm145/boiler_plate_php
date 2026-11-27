@@ -96,7 +96,7 @@ Before writing text, date, number or input handling by hand, look here. `App\Hel
 | `LocalTime` | App local time ↔ UTC of the DB (`isClockTime`, `toUtc`, `fromUtc`) | `LocalTime::toUtc('2026-11-24 09:00')` |
 | `Duration` | Minutes → label | `Duration::label(90)` → `1h30` |
 | `MoneyFormat` | Cents → money text (BRL default, USD) | `MoneyFormat::format(123456)` → `R$ 1.234,56` |
-| `Input` | Normalize posted values: `string`, `nullableString`, `nullableInt`, `accessEmail`, `isDigitsOrBlank`, `time`, `duration`, `money` (→ cents), `cents`, `decimal` (→ decimal string), `date` (BR → `Y-m-d`) | `Input::money('1.234,56')` → `123456`; `Input::decimal('1.234,567', 3)` → `'1234.567'` |
+| `Input` | Normalize posted values: `string`, `nullableString`, `nullableInt`, `accessEmail`, `isDigitsOrBlank`, `time` (→ `HH:MM:SS` or `null`), `duration`, `money` (→ cents), `cents`, `decimal` (BR text → decimal string), `decimalFromNumberField` (`<input type="number">`, dot decimal), `date` (BR → `Y-m-d`) | `Input::money('1.234,56')` → `123456`; `Input::decimal('1.234,567', 3)` → `'1234.567'` |
 | `HtmlSanitizer` | Allowlist cleanup of rich-editor HTML before saving; `isSafeLink` | `HtmlSanitizer::clean($html)` |
 | `Color` | Only `#rgb`/`#rrggbb` from the DB reaches a `style=` | `Color::hexOr($color, '#6c757d')` |
 | `Url` | Absolute URL from `APP_URL` (e-mails) | `Url::absolute('/admin/login')` |
@@ -107,6 +107,7 @@ Before writing text, date, number or input handling by hand, look here. `App\Hel
 
 Rules:
 - **Money** is stored as integer cents (`Input::money` in, `MoneyFormat` out). **Decimals and weights** travel as decimal strings (`Input::decimal`, `DECIMAL` column). Never `float` on the way to the database.
+- **`Input::decimal` reads Brazilian text** (`1.234` = one thousand two hundred thirty-four). A `<input type="number">` always posts a dot decimal (`1.234` = 1,234), so read those with `Input::decimalFromNumberField` — mixing them up silently multiplies by 1000. Prefer masked text inputs (BR format) for money, weight and decimals.
 - **CNPJ is alphanumeric text** (IN RFB 2.229/2024: 12 `A-Z0-9` + 2 check digits) — never store it as a number.
 - **Every new view escapes with `e()`.** Replace existing `htmlspecialchars(...)` calls with `e()` only when touching that view for another reason.
 

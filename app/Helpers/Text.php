@@ -7,7 +7,7 @@ class Text
     /**
      * Transliteria (nunca remove a letra, troca pelo equivalente sem
      * acento) antes de reduzir a [a-z0-9-] — util pra slug publico de
-     * qualquer entidade (posts, times, paginas...).
+     * qualquer entidade (posts, categorias, paginas...).
      */
     public static function slugify(string $value): string
     {

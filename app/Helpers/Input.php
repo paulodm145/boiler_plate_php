@@ -47,12 +47,16 @@ final class Input
         return $string === '' || ctype_digit($string);
     }
 
-    /** Horario HH:MM vindo de <input type="time"> como HH:MM:SS; fora do formato, 09:00:00. */
-    public static function time($value): string
+    /** Horario de <input type="time"> ("10:00" ou "10:00:00") -> "HH:MM:SS"; vazio ou impossivel ("25:99") -> null. */
+    public static function time($value): ?string
     {
-        $value = is_string($value) ? $value : '09:00';
+        $value = is_string($value) ? trim($value) : '';
 
-        return preg_match('/^\d{2}:\d{2}$/', $value) === 1 ? $value . ':00' : '09:00:00';
+        if (preg_match('/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?\z/', $value) !== 1) {
+            return null;
+        }
+
+        return strlen($value) === 5 ? $value . ':00' : $value;
     }
 
     /**
@@ -131,6 +135,8 @@ final class Input
      * sem passar por float: "1.234,567" -> "1234.567", "1234,5" e "1234.5" -> "1234.5",
      * "-0,5" -> "-0.5". Ponto so vale como decimal sem virgula e sem grupo de milhar.
      * Vazio, mais casas que $scale, mais de 15 digitos inteiros ou formato ambiguo -> null.
+     * Formato brasileiro: "1.234" e mil duzentos e trinta e quatro. Para <input type="number">,
+     * que envia ponto decimal, use decimalFromNumberField().
      */
     public static function decimal($value, int $scale): ?string
     {
@@ -145,6 +151,31 @@ final class Input
         }
 
         $integer = ltrim($integer, '0') === '' ? '0' : ltrim($integer, '0');
+
+        if (strlen($fraction) > $scale || strlen($integer) > 15) {
+            return null;
+        }
+
+        $number = $fraction === '' ? $integer : $integer . '.' . $fraction;
+
+        return $sign === '-' && trim($number, '0.') !== '' ? '-' . $number : $number;
+    }
+
+    /**
+     * Valor de <input type="number">, que o navegador sempre envia com ponto decimal e
+     * sem milhar, em qualquer idioma: "1.234" e 1,234 (nao mil duzentos e trinta e quatro).
+     * Use este, e nao decimal(), para campos type="number". Virgula, mais casas que
+     * $scale ou mais de 15 digitos inteiros -> null.
+     */
+    public static function decimalFromNumberField($value, int $scale): ?string
+    {
+        $text = is_string($value) ? trim($value) : '';
+
+        if (preg_match('/^(-?)(\d+)(?:\.(\d+))?\z/', $text, $parts) !== 1) {
+            return null;
+        }
+
+        [$sign, $integer, $fraction] = [$parts[1], ltrim($parts[2], '0') === '' ? '0' : ltrim($parts[2], '0'), $parts[3] ?? ''];
 
         if (strlen($fraction) > $scale || strlen($integer) > 15) {
             return null;

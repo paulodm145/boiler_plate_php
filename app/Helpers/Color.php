@@ -3,7 +3,7 @@
 namespace App\Helpers;
 
 /**
- * Cores vindas do banco (prioridade, coluna, cor personalizada da tarefa)
+ * Cores vindas do banco (etiquetas, status, cor escolhida pela pessoa)
  * vao parar em style="" -- htmlspecialchars impede sair do atributo, mas
  * nao impede CSS arbitrario dentro dele. So #rgb/#rrggbb passa; o resto
  * vira o fallback.
