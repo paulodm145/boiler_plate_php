@@ -9,6 +9,7 @@ use App\Helpers\Br\Cpf;
 use App\Helpers\Br\Date;
 use App\Helpers\Br\Phone;
 use App\Helpers\Input;
+use App\Storage\MimeTypes;
 use InvalidArgumentException;
 
 /**
@@ -58,20 +59,6 @@ class Validator
         'money' => 'Informe um valor válido em :attribute (ex.: 1.234,56).',
         'decimal_br' => 'Informe um número válido em :attribute.',
         'weight' => 'Informe um peso válido em :attribute (ex.: 1.234,567).',
-    ];
-
-    /** Extensao -> tipos MIME aceitos, detectados pelo conteudo (finfo), nunca pela extensao. */
-    protected const MIME_TYPES = [
-        'jpg' => ['image/jpeg'],
-        'jpeg' => ['image/jpeg'],
-        'png' => ['image/png'],
-        'gif' => ['image/gif'],
-        'webp' => ['image/webp'],
-        'pdf' => ['application/pdf'],
-        'csv' => ['text/plain', 'text/csv'],
-        'txt' => ['text/plain'],
-        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip'],
-        'zip' => ['application/zip'],
     ];
 
     /** @var array<string, array{0: callable, 1: string}> */
@@ -484,22 +471,10 @@ class Validator
         return $this->isFile($value);
     }
 
-    /** Tipo detectado pelo conteudo do arquivo (finfo), nao pela extensao do nome. */
+    /** Tipo detectado pelo conteudo do arquivo (finfo), nao pela extensao do nome (App\Storage\MimeTypes). */
     protected function ruleMimes(mixed $value, array $params): bool
     {
-        if (!$this->isFile($value)) {
-            return false;
-        }
-
-        $detected = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($value['tmp_name']);
-
-        foreach ($params as $extension) {
-            if (in_array($detected, static::MIME_TYPES[strtolower($extension)] ?? [], true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->isFile($value) && MimeTypes::matches($value['tmp_name'], $params);
     }
 
     protected function ruleMaxSize(mixed $value, array $params): bool

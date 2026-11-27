@@ -3,8 +3,8 @@
 namespace App\Services\Auth;
 
 use App\Core\Env;
-use App\Core\Mail\MailerInterface;
-use App\Core\Mail\SmtpMailer;
+use App\Mail\Mailer;
+use App\Mail\PasswordResetMail;
 use App\Repositories\PasswordResetRepository;
 use App\Repositories\UserRepository;
 use App\Services\ServiceResult;
@@ -20,13 +20,11 @@ final class PasswordResetService
 
     private UserRepository $users;
     private PasswordResetRepository $resets;
-    private MailerInterface $mailer;
 
-    public function __construct(?UserRepository $users = null, ?PasswordResetRepository $resets = null, ?MailerInterface $mailer = null)
+    public function __construct(?UserRepository $users = null, ?PasswordResetRepository $resets = null)
     {
         $this->users = $users ?? new UserRepository();
         $this->resets = $resets ?? new PasswordResetRepository();
-        $this->mailer = $mailer ?? new SmtpMailer();
     }
 
     /**
@@ -47,14 +45,7 @@ final class PasswordResetService
 
         $link = rtrim((string) Env::get('APP_URL', ''), '/') . '/admin/redefinir-senha/' . $token;
 
-        $this->mailer->send(
-            $email,
-            'Redefinição de senha',
-            "Recebemos um pedido de redefinição de senha.\n\n"
-                . 'Clique no link abaixo para escolher uma nova senha (válido por ' . self::TOKEN_MINUTES . " minutos):\n"
-                . $link . "\n\n"
-                . 'Se você não pediu isso, ignore este e-mail.'
-        );
+        Mailer::send((new PasswordResetMail($link, self::TOKEN_MINUTES))->to($email));
     }
 
     public function isValidToken(string $token): bool

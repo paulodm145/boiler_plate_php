@@ -2,7 +2,7 @@
 
 namespace App\Services\Settings;
 
-use App\Core\Mail\SmtpMailer;
+use App\Mail\SmtpConfig;
 use App\Repositories\SettingRepository;
 use App\Services\ServiceResult;
 
@@ -31,6 +31,6 @@ final class SettingsService
     /** Campos do SMTP que vem do .env e que a tela nao controla. */
     public function smtpFromEnv(): array
     {
-        return SmtpMailer::envOverriddenKeys();
+        return SmtpConfig::envOverriddenKeys();
     }
 }

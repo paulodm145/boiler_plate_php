@@ -82,3 +82,9 @@ it('avisa quando storage/uploads nao existe, sem reprovar', function (): void {
     assertFalse(requirementByLabel($requirements->check(), 'uploads')['ok']);
     assertTrue($requirements->passes(), 'storage/uploads e aviso, nao deve reprovar');
 });
+
+it('reporta a extensao zip (exportacao em Excel)', function (): void {
+    $items = (new Requirements(requirementsRoot()))->check();
+
+    assertSame(class_exists('ZipArchive'), requirementByLabel($items, 'zip')['ok']);
+});

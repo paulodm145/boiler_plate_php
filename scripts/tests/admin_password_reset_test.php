@@ -4,25 +4,12 @@ declare(strict_types=1);
 
 use App\Controllers\AdminPasswordResetController;
 use App\Core\Auth;
-use App\Core\Mail\MailerInterface;
 use App\Core\RateLimiter;
 use App\Database\Database;
 use App\Repositories\PasswordResetRepository;
 use App\Repositories\UserRepository;
 
 echo "\nAdminPasswordResetController\n";
-
-class FakeMailer implements MailerInterface
-{
-    public $sent = [];
-
-    public function send(string $to, string $subject, string $body): bool
-    {
-        $this->sent[] = ['to' => $to, 'subject' => $subject, 'body' => $body];
-
-        return true;
-    }
-}
 
 function controllerWithTestRepositories(): array
 {
@@ -59,13 +46,13 @@ function controllerWithTestRepositories(): array
 
     $users = new UserRepository($database);
     $resets = new PasswordResetRepository($database);
-    $mailer = new FakeMailer();
+    $mailer = \App\Mail\Mailer::fake();
 
     // O controller nao aceita injecao (nao tem construtor com argumentos): troca o
     // Service dele por um ligado aos repositorios de teste.
     $controller = new AdminPasswordResetController();
     $serviceProperty = new ReflectionProperty(AdminPasswordResetController::class, 'resets');
-    $serviceProperty->setValue($controller, new \App\Services\Auth\PasswordResetService($users, $resets, $mailer));
+    $serviceProperty->setValue($controller, new \App\Services\Auth\PasswordResetService($users, $resets));
 
     Auth::logout();
 
@@ -107,8 +94,8 @@ it('pedir reset pra e-mail existente e inexistente devolvem a mesma resposta, so
     });
 
     assertSame($resultExisting['body'], $resultMissing['body'], 'a resposta deveria ser identica, exista ou nao o e-mail');
-    assertSame(1, count($mailer->sent), 'so o e-mail existente deveria ter disparado o envio');
-    assertSame('ana@exemplo.com', $mailer->sent[0]['to']);
+    assertSame(1, count($mailer->messages), 'so o e-mail existente deveria ter disparado o envio');
+    assertSame('ana@exemplo.com', $mailer->messages[0]->to[0]['address']);
 });
 
 it('bloqueia a 4a tentativa de pedido de reset no mesmo IP', function (): void {

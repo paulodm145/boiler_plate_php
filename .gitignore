@@ -4,6 +4,7 @@
 !/public/uploads/.gitkeep
 /storage/uploads/*
 !/storage/uploads/.gitkeep
+!/storage/uploads/.htaccess
 /database/*.sql
 /vendor/
 /node_modules/
