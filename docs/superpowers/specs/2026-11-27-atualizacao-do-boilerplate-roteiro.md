@@ -53,9 +53,9 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 - [x] Reescrever como exemplo: usuários, configurações e recuperação de senha em Controller → FormRequest → Service (o instalador só trocou o validador).
 
 ### Fase 4 — Infraestrutura
-- [ ] **E-mail:** classes `Mailable` (destinatário, assunto, view e dados), `Mailer` com `SmtpMailer` (PHPMailer) e `NullMailer`/log para dev e testes, templates em `Views/emails/` com `_layout`. A recuperação de senha passa a usar isso.
-- [ ] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean`, `ContentDisposition` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
-- [ ] **Exportação:** base `Export` (Template Method), `CsvExport` (BOM, `;` e proteção contra fórmula), `PdfExport` (FPDF vendorizado em `lib/fpdf`) e `XlsxExport` (o `XlsxWriter` do lorencine adaptado à base). Guia em `docs/exportacao.md`.
+- [x] **E-mail:** classes `Mailable` (destinatário, assunto, view e dados), `Mailer` com `SmtpMailer` (PHPMailer) e `NullMailer`/log para dev e testes, templates em `Views/emails/` com `_layout`. A recuperação de senha passa a usar isso.
+- [x] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean`, `ContentDisposition` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
+- [x] **Exportação:** base `Export` (Template Method), `CsvExport` (BOM, `;` e proteção contra fórmula), `PdfExport` (FPDF vendorizado em `lib/fpdf`) e `XlsxExport` (o `XlsxWriter` do lorencine adaptado à base). Guia em `docs/exportacao.md`.
 
 ### Fase 5 — API
 - [ ] Rotas `/api/v1/...` sem sessão, com um ponto de encaixe para a autenticação (middleware), sem implementá-la.

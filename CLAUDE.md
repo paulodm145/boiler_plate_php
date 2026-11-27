@@ -49,7 +49,7 @@ Controllers are thin HTTP glue over well-tested repositories and generally aren'
 
 Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deliberately, because the deploy target is FTP-only shared hosting with no SSH/Composer/Node. Everything under `App\` autoloads via a tiny PSR-4-ish autoloader (`App\Core\Autoloader`), not Composer.
 
-**Exception:** `lib/PHPMailer/` (PHPMailer v7.1.1 — `Exception.php`, `PHPMailer.php`, `SMTP.php`) is vendored manually, not via Composer, not autoloaded by `App\Core\Autoloader` (its `PHPMailer\PHPMailer\*` namespace is outside the `App\` prefix the autoloader resolves — anything using it does an explicit `require_once` of the 3 files, PHPMailer's own documented no-Composer usage). This is a deliberate exception to "zero third-party dependencies," decided with the project owner: native `mail()` can't do authenticated SMTP relay, which the password-reset e-mail flow needs. Updating PHPMailer means re-downloading the 3 files by hand from a specific tag — there's no `composer update` here.
+**Exception:** `lib/PHPMailer/` (PHPMailer v7.1.1 — `Exception.php`, `PHPMailer.php`, `SMTP.php`) is vendored manually, not via Composer, not autoloaded by `App\Core\Autoloader` (its `PHPMailer\PHPMailer\*` namespace is outside the `App\` prefix the autoloader resolves — only `App\Mail\SmtpTransport` uses it, with an explicit `require_once` of the 3 files, PHPMailer's own documented no-Composer usage). This is a deliberate exception to "zero third-party dependencies," decided with the project owner: native `mail()` can't do authenticated SMTP relay, which the password-reset e-mail flow needs. Updating PHPMailer means re-downloading the 3 files by hand from a specific tag — there's no `composer update` here. The second vendored library is **FPDF 1.86** in `lib/fpdf/` (origin and SHA-256 in `lib/fpdf/README.md`), used only by `App\Helpers\Export\Pdf\PdfDocument`. `lib/` is denied to the web (`lib/.htaccess` + the root `.htaccess`).
 
 **Request flow:** `public/index.php` is the single entry point (document root is `public/`, but the root `.htaccess`/`index.php` shim covers hosts that serve from the project root instead — it just `require`s `public/index.php`). It: registers `ErrorHandler` → loads `.env` (and configures `Logger` from it) → starts the session → sends `SecurityHeaders` → checks `App\Core\InstallState::isInstalled()` and hands off to `App\Core\InstallRoutes` if not → builds an `App\Core\Router` and registers every route by `require`-ing `routes.php` (a plain script at the project root that returns a `function (Router $router): void` — no route files/attributes beyond this single one, no auto-discovery) → dispatches. There's no DI container; controllers are instantiated fresh per request with no constructor arguments.
 
@@ -58,8 +58,10 @@ Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deli
 - `App\Http\Requests` — one `FormRequest` per form/endpoint (format rules only). See "Validation" below.
 - `App\Services\<Area>\<Name>Service` — business rules, transactions (`Database::transaction()`, re-entrant), orchestration of repositories and e-mail. Return an `App\Services\ServiceResult` (`ok($data)` / `fail('snake_case_code', 'mensagem')`). Dependencies are optional constructor args (`?UserRepository $users = null`) so tests inject them; the acting user comes in as a parameter (`delete($uuid, $actor)`).
 - `App\Validation` — `Validator`, `ErrorBag`, `ValidationException` (usable outside HTTP too).
+- `App\Mail` — `Mailable`, `Mailer`, `Message`, transports (`SmtpTransport`, `LogTransport`, `ArrayTransport`) and `SmtpConfig`. See "E-mail".
+- `App\Storage` — `Disk`/`LocalDisk`, `StoragePath`, `StoredFile`, `MimeTypes`; plus `App\Services\Storage\UploadService` and `App\Http\FileResponse`. See "Files".
 - `App\Repositories` — thin query wrappers around `App\Database\Database` (a PDO wrapper: `fetch`/`fetchAll`/`execute`). Repositories return plain arrays; for simple lookups they may use the `Model`/`QueryBuilder` layer below, and complex queries are written as plain SQL. Each repository takes an optional `Database` in its constructor (`?Database $database = null`) so tests can inject an isolated connection.
-- `App\Core` — the framework-shaped pieces: `Router` (with a middleware pipeline, see below), `Auth`, `Csrf`, `Env`/`EnvWriter` (hand-rolled `.env` parser/writer), `View` (plain `require` of a PHP template, no template engine), `Migrator`, `InstallState`, `Requirements`, `Logger`/`ErrorHandler` (see Errors & logging), `ErrorPage` (HTML or JSON depending on the request), `Mail\SmtpMailer`, `Icon`. Generic utilities don't belong here — they go to `App\Helpers`.
+- `App\Core` — the framework-shaped pieces: `Router` (with a middleware pipeline, see below), `Auth`, `Csrf`, `Env`/`EnvWriter` (hand-rolled `.env` parser/writer), `View` (plain `require` of a PHP template, no template engine), `Migrator`, `InstallState`, `Requirements`, `Logger`/`ErrorHandler` (see Errors & logging), `ErrorPage` (HTML or JSON depending on the request), `Icon`. Generic utilities don't belong here — they go to `App\Helpers`.
 - `App\Core\Model` + `QueryBuilder` + `Relations\*` (`HasOne`, `HasMany`, `BelongsTo`, `BelongsToMany`) — a small active-record layer for **simple** queries (find by key, filtered lists, simple relations); see `App\Models\User` and `scripts/tests/model_test.php`. **Complex queries (several joins, aggregations, subqueries, reports) use plain SQL through `App\Database\Database`** inside a repository — don't stretch the QueryBuilder to cover them.
 - `App\Http` — pieces that know about the HTTP request but not about business rules: `SecurityHeaders`, `FormRequest`, `ValidationResponder`, `Form`, `Flash`, `JsonResponse`, `ListQuery`.
 - `App\Helpers` — pure utilities: no request, no business rules, no state. See "Helpers: what already exists" below before writing text, date, number or input handling by hand.
@@ -84,7 +86,25 @@ Who may do what:
 
 **Security headers:** `SecurityHeaders::send()` adds a CSP without script rules (`object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'`), `Permissions-Policy`, COOP and HSTS (HTTPS only); `X-Frame-Options`, `nosniff` and `Referrer-Policy` come from both `.htaccess` files so static files get them too. The root `.htaccess` also refuses `app/`, `database/`, `scripts/`, `storage/`, `lib/`, `docs/`, `docker/`, `routes.php`, hidden files and `*.md|yml|yaml|sql|sh|lock|example|docker` for hosts that serve the project root.
 
-**E-mail:** `SmtpMailer` reads the SMTP settings from the admin settings page, with `SMTP_*` variables in `.env` taking precedence field by field (the page tags those fields `.env`). `SMTP_PASSWORD` only applies together with `SMTP_HOST`, and with it the port and encryption also come from `.env` (default `587`/`tls`, never unencrypted) — otherwise anyone who can edit the settings page could point the host elsewhere and receive the `.env` password.
+**E-mail:** one class per e-mail type, Laravel-Mailable style, sent through `App\Mail\Mailer`:
+
+```php
+final class InvoiceMail extends Mailable
+{
+    public function __construct(private readonly array $invoice) {}
+    public function subject(): string { return 'Sua fatura ' . $this->invoice['code']; }
+    protected function view(): string { return 'invoice'; }                    // app/Views/emails/invoice.php
+    protected function data(): array { return ['invoice' => $this->invoice]; }
+    protected function attachments(): array { return [['content' => $pdf, 'name' => 'fatura.pdf', 'mime' => 'application/pdf']]; }
+}
+
+Mailer::send((new InvoiceMail($invoice))->to($client['email'], $client['name']));   // bool, never throws
+```
+
+- The template is rendered inside `app/Views/emails/_layout.php` (inline CSS, tables — e-mail clients ignore external CSS) and the plain-text part is generated from it (`Mailable::textFromHtml()`, links become `text (url)`) unless `text()` is overridden. Escape with `e()` in templates.
+- `Message` validates addresses and strips `\r`/`\n` from subject and names (header injection).
+- Transport: `MAIL_TRANSPORT=smtp|log` in `.env`; empty = `smtp` if a host is configured, else `log` (the e-mail goes to `storage/logs` instead of vanishing; outside `APP_DEBUG` 40+-char tokens in the body are masked so log readers can't use reset links). Failures return `false` and log a warning. Tests: `$fake = Mailer::fake(); ... $fake->last()->subject` and `Mailer::reset()`.
+- SMTP settings come from the admin settings page with `SMTP_*` in `.env` taking precedence field by field (`App\Mail\SmtpConfig`; the page tags those fields `.env`). `SMTP_PASSWORD` only applies together with `SMTP_HOST`, and with it the port and encryption also come from `.env` (default `587`/`tls`, never unencrypted) — otherwise anyone who can edit the settings page could point the host elsewhere and receive the `.env` password.
 
 **Auth:** `App\Core\Auth` is a static wrapper over `$_SESSION['user']` (`id`, `uuid`, `name`, `email`, `is_admin`). This boilerplate ships a single flat role (any logged-in user can reach `/admin/*`) — `UserRepository::verifyPassword()` also transparently upgrades legacy 32-char MD5 hashes to `password_hash()` on successful login, useful if `users` ever gets seeded/imported data from elsewhere. If the project built on this needs real roles or multi-tenancy, follow the pattern `mydaily` used on top of the same boilerplate: a `Tenant` static registry (same shape as `Auth`) set only by a `ResolveTenant` middleware, tenant-scoped repositories taking the tenant id as a **required, non-nullable constructor argument**, and a `RequireRole` middleware built the same way as `RequireAuth`.
 
@@ -199,6 +219,25 @@ $list->isPartial() ? View::render('admin/partials/clients-table', $data) : View:
 - `ORDER BY` only ever comes from the sortable map; `LIMIT`/`OFFSET` are integers built into the SQL string.
 - Views: `$list->sortLink('Nome', 'name')` for sortable `<th>`, `admin/partials/pagination.php`, `admin/partials/page-size.php`, and `public/assets/js/live-grid.js` (wrap in `data-live-grid` with a GET `form[data-grid-filters]` and `[data-grid-results]`; without JS the page still works). See `app/Views/admin/users.php`.
 - `public/assets/js/admin-table.js` (everything client-side) is still there for **small** lists (dozens of rows); anything that can grow uses `ListQuery`.
+
+## Files (upload & download)
+
+```php
+$result = (new UploadService())->store($_FILES['contract'] ?? null, 'contracts', 5 * 1024 * 1024, MimeTypes::DOCUMENTS);
+// ok: ['path' => 'contracts/2026/11/<uuid>.pdf', 'disk' => 'local', 'mime', 'size', 'original_name']  → save in the row
+// fail: missing_file | upload_failed | file_too_large | invalid_type | could_not_save
+
+FileResponse::send(new StoredFile(new LocalDisk($root . '/storage/uploads'), $row['path'], $row['mime'], $row['original_name'], inline: true));
+```
+
+- The type is **always** detected from the content (`finfo`, `App\Storage\MimeTypes`) against the caller's allowlist (`MimeTypes::IMAGES`, `DOCUMENTS`, `SPREADSHEETS`, or your own `mime => ext` map); the browser's `type` and the file name's extension are never trusted. Size is the real file size. The stored name is `<uuid>.<ext>` under `storage/uploads/<folder>/<YYYY>/<MM>/` (outside the web, `storage/uploads/.htaccess` denies all); the cleaned original name (`FileName::clean`) is only for display/download. `move_uploaded_file` guarantees the file came from this request's upload.
+- `FileResponse` is the **only** way a stored file reaches the browser: `nosniff`, CSP `sandbox`, RFC 6266 `Content-Disposition` (`ContentDisposition::header`), and `inline` only for raster images and PDF — SVG/HTML always download. Check permission before calling it.
+- Validation side: `'contract' => 'required|file|mimes:pdf|max_size:5120'` (same `MimeTypes` map). Multiple files in one field: `UploadedFiles::fromField($_FILES['docs'])`.
+- `UploadService::removeStaleStaging(time() - 3600)` cleans interrupted uploads (cron).
+
+## Export (CSV, PDF, Excel)
+
+`App\Helpers\Export\{CsvExport, PdfExport, XlsxExport}` share one base (`Export`): header + rows in, file out (`->download('name')` or `->toString()`). The Service builds the rows (business decision), the controller only hands the file over. Rows must match the header length (else `InvalidArgumentException`), and **formula protection is always on** in CSV and XLSX (text starting with `= + - @`, tab or CR gets a `'`). `XlsxExport` has typed columns (`->types([2 => 'money', 3 => 'date'])`) and needs the `zip` extension. Full guide: `docs/exportacao.md`.
 
 ## Coding constraints
 
