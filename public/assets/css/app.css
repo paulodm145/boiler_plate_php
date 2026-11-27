@@ -405,3 +405,31 @@ a.dash-list-title:hover { color: var(--admin-primary); }
     padding: .5rem .75rem; text-align: left; cursor: pointer; width: 100%;
 }
 .gallery-picker-item:hover { border-color: var(--admin-primary); background: var(--admin-primary-light); }
+
+
+/* ---- Grids: cabecalhos ordenaveis e carregamento ao vivo ---- */
+.grid-sortable a, .grid-sort-button {
+    color: inherit; text-decoration: none; white-space: nowrap;
+    background: none; border: 0; padding: 0; font: inherit; font-weight: inherit; cursor: pointer;
+}
+.grid-sortable a:hover, .grid-sort-button:hover { color: var(--admin-primary); }
+.grid-sort-icon, [data-sort-icon] { opacity: .35; font-size: .8em; }
+.grid-sort-icon.active { opacity: 1; color: var(--admin-primary); }
+[data-grid-results] { transition: opacity .15s; }
+[data-grid-results].grid-loading { opacity: .5; pointer-events: none; }
+.grid-results-wrap { position: relative; min-height: 140px; }
+.grid-overlay {
+    position: absolute; inset: 0; z-index: 5; display: none;
+    justify-content: center; align-items: flex-start; padding-top: 3rem;
+    background: rgba(255, 255, 255, .6);
+}
+.grid-overlay.show { display: flex; }
+.grid-overlay-box {
+    position: sticky; top: 40vh;
+    display: inline-flex; align-items: center; gap: .6rem;
+    padding: .65rem 1.1rem; border-radius: 8px;
+    background: #fff; border: 1px solid var(--admin-border);
+    color: var(--admin-primary-dark); font-weight: 600;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, .18);
+}
+.grid-overlay-box .spinner-border { color: var(--admin-primary); }

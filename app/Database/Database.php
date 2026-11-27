@@ -13,6 +13,9 @@ class Database
 
     private static $shared;
 
+    /** Estado de transacao por conexao PDO (profundidade e se uma interna falhou). */
+    private static ?\WeakMap $transactions = null;
+
     public function __construct(?PDO $pdo = null)
     {
         $this->pdo = $pdo ?: $this->createConnection();
@@ -96,5 +99,68 @@ class Database
         } catch (PDOException $exception) {
             throw new PDOException('Database connection failed: ' . $exception->getMessage(), (int) $exception->getCode());
         }
+    }
+
+    /**
+     * Roda $fn numa transacao e devolve o retorno dele. Reentrante: so o nivel
+     * mais externo faz commit/rollback. Se um nivel interno falhar, tudo e
+     * desfeito ao sair do externo, mesmo que alguem tenha capturado a excecao.
+     */
+    public function transaction(callable $fn): mixed
+    {
+        $state = $this->transactionState();
+
+        if ($state->depth === 0) {
+            $this->pdo->beginTransaction();
+        }
+
+        $state->depth++;
+
+        try {
+            $result = $fn();
+        } catch (\Throwable $exception) {
+            $state->depth--;
+
+            if ($state->depth > 0) {
+                $state->rollbackOnly = true;
+
+                throw $exception;
+            }
+
+            $state->rollbackOnly = false;
+
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
+
+        $state->depth--;
+
+        if ($state->depth > 0) {
+            return $result;
+        }
+
+        if ($state->rollbackOnly) {
+            $state->rollbackOnly = false;
+
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw new \RuntimeException('Transacao interna falhou; tudo foi desfeito.');
+        }
+
+        $this->pdo->commit();
+
+        return $result;
+    }
+
+    private function transactionState(): \stdClass
+    {
+        self::$transactions ??= new \WeakMap();
+
+        return self::$transactions[$this->pdo] ??= (object) ['depth' => 0, 'rollbackOnly' => false];
     }
 }

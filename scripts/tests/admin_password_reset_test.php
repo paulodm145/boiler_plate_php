@@ -61,34 +61,35 @@ function controllerWithTestRepositories(): array
     $resets = new PasswordResetRepository($database);
     $mailer = new FakeMailer();
 
+    // O controller nao aceita injecao (nao tem construtor com argumentos): troca o
+    // Service dele por um ligado aos repositorios de teste.
     $controller = new AdminPasswordResetController();
-
-    $usersProperty = new ReflectionProperty(AdminPasswordResetController::class, 'users');
-    $usersProperty->setAccessible(true);
-    $usersProperty->setValue($controller, $users);
-
-    $resetsProperty = new ReflectionProperty(AdminPasswordResetController::class, 'resets');
-    $resetsProperty->setAccessible(true);
-    $resetsProperty->setValue($controller, $resets);
-
-    $mailerProperty = new ReflectionProperty(AdminPasswordResetController::class, 'mailer');
-    $mailerProperty->setAccessible(true);
-    $mailerProperty->setValue($controller, $mailer);
+    $serviceProperty = new ReflectionProperty(AdminPasswordResetController::class, 'resets');
+    $serviceProperty->setValue($controller, new \App\Services\Auth\PasswordResetService($users, $resets, $mailer));
 
     Auth::logout();
 
     return [$controller, $users, $resets, $mailer];
 }
 
+/** Roda a acao e devolve status, corpo e, se a validacao falhou, os erros (ValidationException). */
 function callAction(callable $action): array
 {
     $_SERVER['REMOTE_ADDR'] = '203.0.113.9';
 
     ob_start();
-    $action();
+
+    try {
+        $action();
+    } catch (\App\Validation\ValidationException $exception) {
+        ob_end_clean();
+
+        return ['status' => 422, 'body' => '', 'errors' => $exception->errors()];
+    }
+
     $body = ob_get_clean();
 
-    return ['status' => http_response_code(), 'body' => $body];
+    return ['status' => http_response_code(), 'body' => $body, 'errors' => null];
 }
 
 it('pedir reset pra e-mail existente e inexistente devolvem a mesma resposta, so o existente dispara o envio', function (): void {
@@ -144,7 +145,7 @@ it('resetForm mostra o form pra um token valido e uma mensagem generica pra um i
     $invalidBody = ob_get_clean();
 
     assertContains('Nova senha', $validBody);
-    assertContains('invalido ou ja expirou', $invalidBody);
+    assertContains('inválido ou já expirou', $invalidBody);
 });
 
 it('resetSubmit troca a senha, apaga o token, loga automaticamente, e o token nao funciona de novo', function (): void {
@@ -154,6 +155,7 @@ it('resetSubmit troca a senha, apaga o token, loga automaticamente, e o token na
     $resets->create('ana@exemplo.com', hash('sha256', $token), 60);
 
     $_POST['password'] = 'novaSenha123';
+    $_POST['password_confirmation'] = 'novaSenha123';
     callAction(function () use ($controller, $token): void {
         $controller->resetSubmit($token);
     });
@@ -175,7 +177,7 @@ it('resetSubmit troca a senha, apaga o token, loga automaticamente, e o token na
         $controller->resetSubmit($token);
     });
 
-    assertContains('invalido ou ja expirou', $replay['body'], 'reenviar o mesmo token deveria ser rejeitado');
+    assertContains('inválido ou já expirou', $replay['body'], 'reenviar o mesmo token deveria ser rejeitado');
 
     $afterReplay = $users->findByEmail('ana@exemplo.com');
     assertTrue($users->verifyPassword('novaSenha123', $afterReplay), 'a senha do primeiro reset nao deveria ter sido trocada de novo pelo replay');
@@ -188,11 +190,12 @@ it('resetSubmit rejeita senha curta, reexibe o form, e nao troca a senha', funct
     $resets->create('ana@exemplo.com', hash('sha256', $token), 60);
 
     $_POST['password'] = '123';
+    $_POST['password_confirmation'] = '123';
     $result = callAction(function () use ($controller, $token): void {
         $controller->resetSubmit($token);
     });
 
-    assertContains('pelo menos 8 caracteres', $result['body']);
+    assertSame('O campo nova senha deve ter pelo menos 8 caracteres.', $result['errors']->first('password'));
 
     $unchanged = $users->findByEmail('ana@exemplo.com');
     assertTrue($users->verifyPassword('segredo123', $unchanged), 'senha nao deveria ter mudado');
@@ -203,11 +206,12 @@ it('resetSubmit com token invalido nao altera nenhuma senha', function (): void 
     $users->create(['name' => 'Ana', 'email' => 'ana@exemplo.com', 'password' => 'segredo123']);
 
     $_POST['password'] = 'novaSenha123';
+    $_POST['password_confirmation'] = 'novaSenha123';
     $result = callAction(function () use ($controller): void {
         $controller->resetSubmit('token-que-nunca-existiu');
     });
 
-    assertContains('invalido ou ja expirou', $result['body']);
+    assertContains('inválido ou já expirou', $result['body']);
 
     $unchanged = $users->findByEmail('ana@exemplo.com');
     assertTrue($users->verifyPassword('segredo123', $unchanged));
@@ -224,11 +228,12 @@ it('resetSubmit com token valido mas usuario ja apagado mostra link invalido, se
     $users->deleteByEmail('ana@exemplo.com');
 
     $_POST['password'] = 'novaSenha123';
+    $_POST['password_confirmation'] = 'novaSenha123';
     $result = callAction(function () use ($controller, $token): void {
         $controller->resetSubmit($token);
     });
 
-    assertContains('invalido ou ja expirou', $result['body']);
+    assertContains('inválido ou já expirou', $result['body']);
     assertFalse(Auth::check(), 'nao deveria autenticar uma sessao pra um usuario que nao existe mais');
     assertSame(null, $resets->findByToken($token), 'a linha orfa deveria ter sido limpa');
 });
@@ -247,6 +252,7 @@ it('bloqueia a 4a tentativa de submit de reset no mesmo IP', function (): void {
     }
 
     $_POST['password'] = 'novaSenha123';
+    $_POST['password_confirmation'] = 'novaSenha123';
     $result = callAction(function () use ($controller, $token): void {
         $controller->resetSubmit($token);
     });

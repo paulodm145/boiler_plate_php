@@ -54,14 +54,27 @@ Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deli
 **Request flow:** `public/index.php` is the single entry point (document root is `public/`, but the root `.htaccess`/`index.php` shim covers hosts that serve from the project root instead — it just `require`s `public/index.php`). It: registers `ErrorHandler` → loads `.env` (and configures `Logger` from it) → starts the session → sends `SecurityHeaders` → checks `App\Core\InstallState::isInstalled()` and hands off to `App\Core\InstallRoutes` if not → builds an `App\Core\Router` and registers every route by `require`-ing `routes.php` (a plain script at the project root that returns a `function (Router $router): void` — no route files/attributes beyond this single one, no auto-discovery) → dispatches. There's no DI container; controllers are instantiated fresh per request with no constructor arguments.
 
 **Layers:**
-- `App\Controllers` — one class per feature area, HTTP-flow only.
+- `App\Controllers` — one class per feature area, HTTP-flow only: read the request through a `FormRequest`, call a Service, pick the response. See `AdminUserController` as the reference.
+- `App\Http\Requests` — one `FormRequest` per form/endpoint (format rules only). See "Validation" below.
+- `App\Services\<Area>\<Name>Service` — business rules, transactions (`Database::transaction()`, re-entrant), orchestration of repositories and e-mail. Return an `App\Services\ServiceResult` (`ok($data)` / `fail('snake_case_code', 'mensagem')`). Dependencies are optional constructor args (`?UserRepository $users = null`) so tests inject them; the acting user comes in as a parameter (`delete($uuid, $actor)`).
+- `App\Validation` — `Validator`, `ErrorBag`, `ValidationException` (usable outside HTTP too).
 - `App\Repositories` — thin query wrappers around `App\Database\Database` (a PDO wrapper: `fetch`/`fetchAll`/`execute`). Repositories return plain arrays; for simple lookups they may use the `Model`/`QueryBuilder` layer below, and complex queries are written as plain SQL. Each repository takes an optional `Database` in its constructor (`?Database $database = null`) so tests can inject an isolated connection.
 - `App\Core` — the framework-shaped pieces: `Router` (with a middleware pipeline, see below), `Auth`, `Csrf`, `Env`/`EnvWriter` (hand-rolled `.env` parser/writer), `View` (plain `require` of a PHP template, no template engine), `Migrator`, `InstallState`, `Requirements`, `Logger`/`ErrorHandler` (see Errors & logging), `ErrorPage` (HTML or JSON depending on the request), `Mail\SmtpMailer`, `Icon`. Generic utilities don't belong here — they go to `App\Helpers`.
 - `App\Core\Model` + `QueryBuilder` + `Relations\*` (`HasOne`, `HasMany`, `BelongsTo`, `BelongsToMany`) — a small active-record layer for **simple** queries (find by key, filtered lists, simple relations); see `App\Models\User` and `scripts/tests/model_test.php`. **Complex queries (several joins, aggregations, subqueries, reports) use plain SQL through `App\Database\Database`** inside a repository — don't stretch the QueryBuilder to cover them.
-- `App\Http` — pieces that know about the HTTP request but not about business rules. Today: `SecurityHeaders`.
+- `App\Http` — pieces that know about the HTTP request but not about business rules: `SecurityHeaders`, `FormRequest`, `ValidationResponder`, `Form`, `Flash`, `JsonResponse`, `ListQuery`.
 - `App\Helpers` — pure utilities: no request, no business rules, no state. See "Helpers: what already exists" below before writing text, date, number or input handling by hand.
 - `App\Core\Middleware` — `MiddlewareInterface::handle(array $routeParams): ?string` (`null` = continue, a string = redirect to that Location, `Router::HALT` = response already sent, e.g. by `ErrorPage::forbidden()` — stop, don't redirect). `Router::get/post($path, $handler, $middleware = [])` takes an array of middleware — either a class name (instantiated with no constructor args) or an already-built instance for middleware that needs a parameter (follow `RequireRole::organizer()`-style static factories if you add one). `Router::resolve()` does the matching + runs the middleware chain with no side effects (no `header()`, no instantiating the controller) and returns a result array; `Router::dispatch()` acts on that result. This separation is what makes the middleware chain unit-testable — see `scripts/tests/router_middleware_test.php`. Only `/admin/*` routes use `RequireAuth::class` today; add more middlewares under `App\Core\Middleware` the same way (e.g. a `RequireRole` or a tenant resolver, if the project you're building on this needs one).
 - `App\Views` — plain PHP templates. The install wizard uses the `ob_start()` → build `$content` → `require '.../layout.php'` pattern. Admin pages `require partials/shell-top.php` then `partials/shell-bottom.php` around inline markup — see any `app/Views/admin/*.php`. Public pages do the same with `partials/site-top.php`/`site-bottom.php`.
+
+Who may do what:
+
+| Layer | May | May not |
+|---|---|---|
+| Controller | read the request via a `FormRequest`, call a Service, choose the response (view, redirect, JSON), `Flash` | SQL, business rules, `new Database()`, private validation methods |
+| FormRequest | **format** rules (`required`, `email`, `cpf`, `unique`...) and input normalization (`prepare()`/`transform()`) | business rules (who may, state, limits) |
+| Service | business rules, transactions, orchestrate repositories and e-mail, return `ServiceResult` | superglobals, `header()`, `echo`, session |
+| Repository | SQL (QueryBuilder for simple, plain SQL for complex) | rules, session |
+| View | display, escaping with `e()` | queries, rules |
 
 **Install & migrations:** no seeded account anywhere in the code. First request when `.env` lacks `APP_INSTALLED=true` is captured entirely by `InstallRoutes`/`InstallController`, a 5-step wizard gated by `.env.install`'s `INSTALL_KEY` (session flags gate each step server-side) that: checks `Requirements`, writes `.env` via `EnvWriter`, runs `database/migrations/*.sql` one at a time through `Migrator` (polled from JS, each migration's result individually visible), and creates the first user. Post-launch schema changes ship as new numbered `database/migrations/NNN_*.sql` files; `AdminUpdateController` (`/admin/atualizar`, requires login) re-runs the same `Migrator::runNextPending()` polling loop from inside the app — the mechanism that applies a migration in production after an FTP upload, since there's no CLI access there.
 
@@ -110,6 +123,82 @@ Rules:
 - **`Input::decimal` reads Brazilian text** (`1.234` = one thousand two hundred thirty-four). A `<input type="number">` always posts a dot decimal (`1.234` = 1,234), so read those with `Input::decimalFromNumberField` — mixing them up silently multiplies by 1000. Prefer masked text inputs (BR format) for money, weight and decimals.
 - **CNPJ is alphanumeric text** (IN RFB 2.229/2024: 12 `A-Z0-9` + 2 check digits) — never store it as a number.
 - **Every new view escapes with `e()`.** Replace existing `htmlspecialchars(...)` calls with `e()` only when touching that view for another reason.
+
+## Validation (FormRequest)
+
+A form is validated by a `FormRequest` in `app/Http/Requests/`; the controller doesn't write `if ($error) { render... }`:
+
+```php
+final class StoreClientRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|string|max:120',
+            'cnpj' => 'required|cnpj|unique:clients,cnpj',
+            'born_on' => 'nullable|date_br',
+            'credit' => 'nullable|money',
+        ];
+    }
+
+    public function attributes(): array { return ['name' => 'nome', 'born_on' => 'data de nascimento']; }
+    public function redirectTo(): string { return '/admin/clients/create'; }
+
+    // After validation: convert BR input to the DB format.
+    protected function transform(array $data): array
+    {
+        $data['born_on'] = Br\Date::parse($data['born_on'] ?? null);
+        $data['credit'] = isset($data['credit']) ? Input::money($data['credit']) : null;
+
+        return $data;
+    }
+}
+
+// Controller
+$data = StoreClientRequest::validate();          // invalid → back to the form with errors + old input
+$result = $this->clients->create($data);         // Service
+```
+
+- On failure it throws `ValidationException`, handled by `Router::dispatch()` (`ValidationResponder`): JSON requests get **422** `{"message": "...", "errors": {"field": ["..."]}}`; forms get the errors and the typed input (never `password*` or files) in the session for **one** request and a 303 back to the `Referer` — **only if it's the same host**, else `redirectTo()`.
+- A request that needs route context takes it in the constructor and is used as an instance: `(new UpdateUserRequest($uuid))->validated()` (e.g. `unique:users,email,<uuid>,uuid` to ignore the record itself — ignore by public uuid, not internal id).
+- A business-rule refusal on a field (Service returned `email_taken`): `throw ValidationException::withMessages(['email' => $result->message()], $data, '/form')`.
+- **Rules:** `required`, `nullable`, `string`, `email`, `min`, `max`, `between` (text counts characters; with `numeric`/`integer` compares the value; files compare KB), `in`, `numeric`, `integer`, `regex` (use the array form if the regex has `|`), `confirmed` (`<field>_confirmation`), `same`, `date` (`Y-m-d`), `before`/`after` (a `Y-m-d` literal, or another field **that has rules**), `unique:table,column[,ignore[,idColumn]]`, `exists:table,column`, `file`, `mimes:jpg,png,pdf` (type detected **by content**, `finfo`), `max_size:kb`. Brazilian: `cpf`, `cnpj` (alphanumeric), `cep`, `phone`, `date_br`, `money`, `decimal_br[:scale]`, `weight` (scale 3). Messages in pt-BR with `:attribute`; override per `'field.rule'` in `messages()`.
+- A new rule is a `protected function ruleName(mixed $value, array $params, string $field): bool` + its message in `Validator::MESSAGES`, or `Validator::extend('name', fn ($value, $params, $data) => ..., 'Mensagem :attribute.')` in the project.
+- `unique`/`exists` table and column names come from code and are checked against `^[a-z_][a-z0-9_]*$`. Files only pass if they came from an HTTP upload (`is_uploaded_file`), so a JSON body imitating `$_FILES` can't point at a server file.
+
+**In the views** (`app/functions.php`, `App\Http\Form`): `old('field', $default)`, `errors()->first('field')`, `Form::invalid('field')` (` is-invalid` on the input), `Form::feedback('field')` (`<div class="invalid-feedback">`), the summary partial `admin/partials/form-errors.php` and `Flash::success()`/`error()` (shown by `shell-top.php`). Validation state lives one request (`flash_validation_state()` in `public/index.php`).
+
+**New-form checklist:** summary at the top (`form-errors.php`) **and** each field red with its message below (`Form::invalid` + `Form::feedback`); `<span class="text-danger">*</span>` on required labels; `value="<?= e(old('field', $current)) ?>"`; `Csrf::field()`; `novalidate` on the `<form>` so the server messages are the ones shown; masks and date picker on BR fields (phase 6). Existing forms may keep only the summary.
+
+## Listing (pagination)
+
+Every list uses the same query parameters: `page`, `per_page` (`10|25|50|100`, default 25), `sort` (only keys of the sortable map), `dir` (`asc|desc`), `q` (search, ≤ 100 chars) and `partial=1` (only the table fragment). Invalid values silently fall back to the default.
+
+```php
+// Repository
+public const SORTABLE = ['name' => 'name', 'created' => 'created_at'];   // URL key => SQL expression
+
+public function paginate(ListQuery $list): Page
+{
+    $sql = 'SELECT uuid, name, created_at FROM clients';
+    $params = [];
+    if ($list->search() !== '') {
+        $sql .= ' WHERE name LIKE :q_name OR cnpj LIKE :q_cnpj';           // one placeholder per occurrence
+        $params = ['q_name' => '%' . $list->search() . '%', 'q_cnpj' => '%' . $list->search() . '%'];
+    }
+    return Paginator::sql($this->database, $sql, $params, $list, 'id ASC');  // or Model::query()->...->paginate($list)
+}
+
+// Controller
+$list = ListQuery::fromRequest(ClientRepository::SORTABLE, 'name');
+$data = ['page' => $this->clients->list($list), 'list' => $list];
+$list->isPartial() ? View::render('admin/partials/clients-table', $data) : View::render('admin/clients', $data + ...);
+```
+
+- `Page` has `items`, `total`, `page`, `perPage`, `pages`, `from`, `to`, `window()` and `meta()` (for JSON). A page past the last one shows the last one.
+- `ORDER BY` only ever comes from the sortable map; `LIMIT`/`OFFSET` are integers built into the SQL string.
+- Views: `$list->sortLink('Nome', 'name')` for sortable `<th>`, `admin/partials/pagination.php`, `admin/partials/page-size.php`, and `public/assets/js/live-grid.js` (wrap in `data-live-grid` with a GET `form[data-grid-filters]` and `[data-grid-results]`; without JS the page still works). See `app/Views/admin/users.php`.
+- `public/assets/js/admin-table.js` (everything client-side) is still there for **small** lists (dozens of rows); anything that can grow uses `ListQuery`.
 
 ## Coding constraints
 

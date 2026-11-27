@@ -7,10 +7,10 @@ use App\Core\EnvWriter;
 use App\Core\InstallState;
 use App\Core\Migrator;
 use App\Core\Requirements;
-use App\Core\Validator;
 use App\Core\View;
 use App\Database\Database;
 use App\Repositories\UserRepository;
+use App\Validation\Validator;
 use PDO;
 use PDOException;
 
@@ -229,26 +229,16 @@ class InstallController
         $password = (string) ($_POST['password'] ?? '');
         $confirmation = (string) ($_POST['password_confirmation'] ?? '');
 
-        if (!Validator::required($values['name']) || !Validator::required($values['email'])) {
-            $this->renderAdmin($values, 'Informe o nome e o e-mail.');
+        // O instalador mostra um erro por vez (primeiro que falhar), no layout proprio do assistente.
+        $validator = Validator::make(
+            $values + ['password' => $password, 'password_confirmation' => $confirmation],
+            ['name' => 'required|max:120', 'email' => 'required|email|max:180', 'password' => 'required|min:8|confirmed'],
+            [],
+            ['name' => 'nome', 'email' => 'e-mail', 'password' => 'senha']
+        );
 
-            return;
-        }
-
-        if (!Validator::email($values['email'])) {
-            $this->renderAdmin($values, 'Informe um e-mail valido.');
-
-            return;
-        }
-
-        if (!Validator::minLength($password, 8)) {
-            $this->renderAdmin($values, 'A senha precisa de pelo menos 8 caracteres.');
-
-            return;
-        }
-
-        if ($password !== $confirmation) {
-            $this->renderAdmin($values, 'As senhas nao conferem.');
+        if ($validator->fails()) {
+            $this->renderAdmin($values, $validator->errors()->flatten()[0]);
 
             return;
         }

@@ -3,6 +3,8 @@
 namespace App\Core;
 
 use App\Database\Database;
+use App\Database\Page;
+use App\Http\ListQuery;
 use InvalidArgumentException;
 
 class QueryBuilder
@@ -18,6 +20,7 @@ class QueryBuilder
     private $orderByDirection = 'asc';
     private $limitValue;
     private $offsetValue;
+    private ?string $orderByRaw = null;
 
     public function __construct(string $modelClass)
     {
@@ -135,6 +138,23 @@ class QueryBuilder
         return $row === null ? 0 : (int) $row['aggregate'];
     }
 
+    /**
+     * Pagina com os parametros da ListQuery. A ordenacao vem do mapa de colunas
+     * permitidas da ListQuery (o orderBy() do builder e ignorado aqui); pagina alem da
+     * ultima vira a ultima.
+     */
+    public function paginate(ListQuery $list): Page
+    {
+        $total = $this->count();
+        $page = min($list->page(), Page::pagesFor($total, $list->perPage()));
+
+        $this->orderByRaw = $list->orderBy();
+        $this->limitValue = $list->perPage();
+        $this->offsetValue = ($page - 1) * $list->perPage();
+
+        return new Page($total === 0 ? [] : $this->get(), $total, $page, $list->perPage());
+    }
+
     private function toSql(): string
     {
         $sql = 'SELECT * FROM ' . $this->table;
@@ -143,7 +163,9 @@ class QueryBuilder
             $sql .= ' WHERE ' . implode(' AND ', $this->wheres);
         }
 
-        if ($this->orderByColumn !== null) {
+        if ($this->orderByRaw !== null) {
+            $sql .= ' ORDER BY ' . $this->orderByRaw;
+        } elseif ($this->orderByColumn !== null) {
             $sql .= ' ORDER BY ' . $this->orderByColumn . ' ' . $this->orderByDirection;
         }
 

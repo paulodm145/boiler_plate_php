@@ -32,6 +32,7 @@ ErrorHandler::showErrorsOnScreen(Env::get('APP_DEBUG', 'false') === 'true');
 
 // Precisa iniciar a sessao aqui, bem cedo — antes de qualquer output.
 Auth::start();
+flash_validation_state();
 SecurityHeaders::send();
 
 if (!(new InstallState($rootPath))->isInstalled()) {

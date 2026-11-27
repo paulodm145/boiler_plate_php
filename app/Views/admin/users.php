@@ -1,32 +1,26 @@
 <?php require __DIR__ . '/partials/shell-top.php'; ?>
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-0">Usuarios</h1>
-                <a class="btn btn-primary" href="/admin/users/create">Novo usuario</a>
+                <h1 class="h3 mb-0">Usuários</h1>
+                <a class="btn btn-primary" href="/admin/users/create">Novo usuário</a>
             </div>
-            <div class="table-responsive admin-table-wrap">
-                <table class="table admin-table align-middle mb-0">
-                    <thead class="admin-table-head">
-                        <tr>
-                            <th>Nome</th>
-                            <th>E-mail</th>
-                            <th>Criado em</th>
-                            <th class="text-end">Acoes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($users as $adminUser): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($adminUser['name'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><?= htmlspecialchars($adminUser['email'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><?= (new DateTime($adminUser['created_at'], new DateTimeZone('UTC')))->format('d/m/Y') ?></td>
-                                <td class="text-end admin-actions">
-                                    <a class="admin-action-link" href="/admin/users/<?= htmlspecialchars($adminUser['uuid'], ENT_QUOTES, 'UTF-8') ?>/edit">Editar</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div data-live-grid>
+                <form class="row g-2 align-items-end mb-3" method="get" action="/admin/users" data-grid-filters>
+                    <div class="col-md-6">
+                        <label class="form-label small mb-1" for="q">Buscar</label>
+                        <input class="form-control" id="q" name="q" type="search" value="<?= e($list->search()) ?>" placeholder="Nome ou e-mail">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <?php require __DIR__ . '/partials/page-size.php'; ?>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+                    </div>
+                </form>
+                <div data-grid-results>
+                    <?php require __DIR__ . '/partials/users-table.php'; ?>
+                </div>
             </div>
 <?php require __DIR__ . '/partials/shell-bottom.php'; ?>
+<script src="<?= e(\App\Helpers\Asset::url('js/live-grid.js')) ?>"></script>
 </body>
 </html>

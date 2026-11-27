@@ -2,6 +2,9 @@
 
 namespace App\Core;
 
+use App\Http\ValidationResponder;
+use App\Validation\ValidationException;
+
 class Router
 {
     // Sentinela que uma middleware devolve quando ja tratou a resposta
@@ -52,8 +55,14 @@ class Router
         }
 
         [$controllerClass, $action] = $result['handler'];
-        $controller = new $controllerClass();
-        $controller->$action(...$result['params']);
+
+        try {
+            $controller = new $controllerClass();
+            $controller->$action(...$result['params']);
+        } catch (ValidationException $exception) {
+            // FormRequest::validate() ou ValidationException::withMessages() no controller.
+            ValidationResponder::respond($exception);
+        }
     }
 
     /**
