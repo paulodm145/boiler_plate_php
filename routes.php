@@ -11,6 +11,7 @@ use App\Controllers\AdminUserController;
 use App\Controllers\ErrorController;
 use App\Controllers\HomeController;
 use App\Core\Middleware\RequireAuth;
+use App\Core\Middleware\RequireAuthJson;
 use App\Core\Middleware\VerifyCsrfToken;
 use App\Core\Router;
 
@@ -36,11 +37,9 @@ return function (Router $router): void {
     $router->get('/admin/settings', [AdminSettingController::class, 'edit'], [RequireAuth::class]);
     $router->post('/admin/settings', [AdminSettingController::class, 'update'], [VerifyCsrfToken::class, RequireAuth::class]);
     $router->get('/admin/atualizar', [AdminUpdateController::class, 'show'], [RequireAuth::class]);
-    // Sem RequireAuth aqui de proposito: esta rota e so chamada via fetch()
-    // pelo polling de public/assets/js/migrate-progress.js, que trata
-    // especificamente um 401 JSON pra "sessao expirou" — RequireAuth
-    // devolveria um redirect HTML (fetch() segue automaticamente, quebrando
-    // o response.json() do JS). AdminUpdateController::run() ja faz o
-    // proprio Auth::check() + 401 JSON, e e o unico guardiao desta rota.
-    $router->post('/admin/atualizar/run', [AdminUpdateController::class, 'run'], [VerifyCsrfToken::class]);
+    // Chamada so via fetch() pelo polling de public/assets/js/migrate-progress.js:
+    // RequireAuthJson devolve 401 JSON ("sessao expirou, faca login") em vez do
+    // redirect HTML do RequireAuth, e vem antes do CSRF porque sessao expirada
+    // tambem nao tem token.
+    $router->post('/admin/atualizar/run', [AdminUpdateController::class, 'run'], [RequireAuthJson::class, VerifyCsrfToken::class]);
 };

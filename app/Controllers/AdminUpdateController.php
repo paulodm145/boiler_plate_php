@@ -32,12 +32,11 @@ class AdminUpdateController
     {
         header('Content-Type: application/json; charset=utf-8');
 
-        // Unico guardiao desta rota (routes.php nao registra RequireAuth
-        // aqui de proposito) pra poder devolver 401 JSON em vez de um
-        // redirect HTML que quebraria o fetch() do polling.
+        // A rota ja passa por RequireAuthJson; a checagem fica como defesa
+        // caso a rota seja registrada sem o middleware.
         if (!Auth::check()) {
             http_response_code(401);
-            echo json_encode(['error' => 'sessao_expirada']);
+            echo json_encode(['error' => 'session_expired']);
 
             return;
         }

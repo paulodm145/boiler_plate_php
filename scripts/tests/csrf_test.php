@@ -68,3 +68,21 @@ it('field() usa o nome _csrf com o token da sessao', function (): void {
 });
 
 csrfReset();
+
+it('sessao expirada no polling do /admin/atualizar/run da 401 JSON, nao 403 de CSRF', function (): void {
+    // O JS do polling trata 401 como "faca login de novo"; sem sessao tambem nao ha
+    // token, entao a checagem de login precisa vir antes da de CSRF.
+    $_SESSION = [];
+    $_POST = [];
+    unset($_SERVER['HTTP_X_CSRF_TOKEN']);
+    $router = new Router();
+    (require dirname(__DIR__, 2) . '/routes.php')($router);
+
+    ob_start();
+    $result = $router->resolve('POST', '/admin/atualizar/run');
+    $body = ob_get_clean();
+
+    assertSame('halt', $result['action']);
+    assertSame(401, http_response_code());
+    assertContains('session_expired', $body);
+});
