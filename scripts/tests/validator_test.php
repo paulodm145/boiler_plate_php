@@ -204,3 +204,11 @@ it('extend registra regra com mensagem propria', function (): void {
     assertTrue(v(['n' => '4'], ['n' => 'even'])->passes());
     assertSame('O campo n deve ser par.', v(['n' => '3'], ['n' => 'even'])->errors()->first('n'));
 });
+
+it('campo de arquivo opcional sem arquivo escolhido conta como vazio', function (): void {
+    // Input file deixado em branco chega em $_FILES com error UPLOAD_ERR_NO_FILE.
+    $none = ['name' => '', 'type' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0];
+
+    assertTrue(v(['avatar' => $none], ['avatar' => 'nullable|file|mimes:jpg'])->passes());
+    assertSame('O campo avatar é obrigatório.', v(['avatar' => $none], ['avatar' => 'required|file'])->errors()->first('avatar'));
+});

@@ -34,7 +34,10 @@ if (!function_exists('old')) {
     /** Valor digitado no envio anterior que falhou na validacao: old('email', $user['email']). */
     function old(string $field, mixed $default = ''): mixed
     {
-        return $_SESSION['_old_current'][$field] ?? $default;
+        $value = $_SESSION['_old_current'][$field] ?? null;
+
+        // Um campo enviado como array (name[]=x) nao volta para um input de texto como "Array".
+        return is_scalar($value) ? $value : $default;
     }
 }
 

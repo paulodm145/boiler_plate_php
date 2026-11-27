@@ -32,18 +32,21 @@ final class ValidationException extends RuntimeException
         return new self(new ErrorBag($normalized), self::withoutSecrets($old), $redirectTo);
     }
 
-    /** Tira da entrada o que nunca deve voltar para o formulario: senhas (password*) e arquivos enviados. */
+    /**
+     * Tira da entrada o que nunca deve ir para a sessao nem voltar ao formulario: qualquer chave
+     * com "password" (smtp_password, current_password, user[password]...), em qualquer nivel,
+     * e arquivos enviados.
+     */
     public static function withoutSecrets(array $input): array
     {
         $kept = [];
 
         foreach ($input as $key => $value) {
-            $isSecret = str_starts_with((string) $key, 'password');
-            $isUpload = is_array($value) && isset($value['tmp_name']);
-
-            if (!$isSecret && !$isUpload) {
-                $kept[$key] = $value;
+            if (stripos((string) $key, 'password') !== false || (is_array($value) && isset($value['tmp_name']))) {
+                continue;
             }
+
+            $kept[$key] = is_array($value) ? self::withoutSecrets($value) : $value;
         }
 
         return $kept;

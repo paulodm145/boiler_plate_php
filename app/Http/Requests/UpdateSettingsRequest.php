@@ -40,4 +40,16 @@ final class UpdateSettingsRequest extends FormRequest
     {
         return '/admin/settings';
     }
+
+    /** Apara os textos (porta ou e-mail colados com espaco nao devem ser recusados); a senha fica como veio. */
+    protected function prepare(array $input): array
+    {
+        foreach ($input as $field => $value) {
+            if (is_string($value) && $field !== 'smtp_password') {
+                $input[$field] = trim($value);
+            }
+        }
+
+        return $input;
+    }
 }

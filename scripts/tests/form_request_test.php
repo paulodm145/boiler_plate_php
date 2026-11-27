@@ -163,3 +163,37 @@ it('Form::invalid e feedback escapam e so aparecem com erro', function (): void 
     resetValidationSession();
     flash_validation_state();
 });
+
+it('old com valor que nao e texto devolve o padrao, sem warning', function (): void {
+    resetValidationSession();
+    $_SESSION['_old'] = ['name' => ['x']];
+    flash_validation_state();
+    error_clear_last();
+
+    assertSame('padrao', old('name', 'padrao'));
+    assertSame(null, error_get_last());
+
+    resetValidationSession();
+    flash_validation_state();
+});
+
+it('withoutSecrets tira qualquer chave com password, inclusive aninhada', function (): void {
+    $kept = ValidationException::withoutSecrets([
+        'name' => 'Ana',
+        'smtp_password' => 'segredo',
+        'Current_Password' => 'x',
+        'user' => ['email' => 'a@b.com', 'password' => 'y'],
+    ]);
+
+    assertSame(['name' => 'Ana', 'user' => ['email' => 'a@b.com']], $kept);
+});
+
+it('UpdateSettingsRequest apara os campos antes de validar', function (): void {
+    $data = (new \App\Http\Requests\UpdateSettingsRequest())->validated([
+        'site_name' => '  Meu App ', 'smtp_port' => ' 587 ', 'smtp_encryption' => 'tls', 'smtp_from_address' => 'a@b.com ',
+    ]);
+
+    assertSame('587', $data['smtp_port']);
+    assertSame('Meu App', $data['site_name']);
+    assertSame('a@b.com', $data['smtp_from_address']);
+});

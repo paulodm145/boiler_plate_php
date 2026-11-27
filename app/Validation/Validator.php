@@ -204,9 +204,13 @@ class Validator
         return (bool) $this->{$method}($value, $params, $field, $names);
     }
 
+    /** null, '' so de espacos, [] e o campo de arquivo deixado em branco (UPLOAD_ERR_NO_FILE). */
     private function isEmpty(mixed $value): bool
     {
-        return $value === null || $value === [] || (is_string($value) && trim($value) === '');
+        return $value === null
+            || $value === []
+            || (is_string($value) && trim($value) === '')
+            || (is_array($value) && ($value['error'] ?? null) === UPLOAD_ERR_NO_FILE);
     }
 
     /** Texto do valor para regras de texto; array/objeto -> null (a regra falha sem warning). */
