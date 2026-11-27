@@ -22,21 +22,28 @@
 
                 <h2 class="h5 mb-3">E-mail (SMTP)</h2>
                 <p class="text-secondary small">Usado pra enviar o link de redefinição de senha. Deixe a senha em branco pra manter a atual.</p>
+                <?php $smtpFromEnv = $smtpFromEnv ?? []; ?>
+                <?php if ($smtpFromEnv !== []): ?>
+                    <div class="alert alert-info small">
+                        Parte do SMTP está definida no arquivo <code>.env</code> do servidor, que tem prioridade sobre esta tela.
+                        Os campos marcados com <span class="badge text-bg-info">.env</span> não mudam ao salvar aqui.
+                    </div>
+                <?php endif; ?>
                 <div class="row g-3 mb-3">
                     <div class="col-md-8">
-                        <label class="form-label" for="smtp_host">Servidor SMTP</label>
+                        <label class="form-label" for="smtp_host">Servidor SMTP<?= in_array('smtp_host', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_host" name="smtp_host" type="text"
                             value="<?= htmlspecialchars($settings['smtp_host'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" for="smtp_port">Porta</label>
+                        <label class="form-label" for="smtp_port">Porta<?= in_array('smtp_port', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_port" name="smtp_port" type="text"
                             value="<?= htmlspecialchars($settings['smtp_port'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                 </div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
-                        <label class="form-label" for="smtp_encryption">Criptografia</label>
+                        <label class="form-label" for="smtp_encryption">Criptografia<?= in_array('smtp_encryption', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <select class="form-select" id="smtp_encryption" name="smtp_encryption">
                             <option value="tls" <?= $settings['smtp_encryption'] === 'tls' ? 'selected' : '' ?>>STARTTLS</option>
                             <option value="ssl" <?= $settings['smtp_encryption'] === 'ssl' ? 'selected' : '' ?>>SSL</option>
@@ -44,23 +51,23 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" for="smtp_username">Usuário</label>
+                        <label class="form-label" for="smtp_username">Usuário<?= in_array('smtp_username', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_username" name="smtp_username" type="text"
                             value="<?= htmlspecialchars($settings['smtp_username'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" for="smtp_password">Senha</label>
+                        <label class="form-label" for="smtp_password">Senha<?= in_array('smtp_password', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_password" name="smtp_password" type="password" value="">
                     </div>
                 </div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label" for="smtp_from_address">E-mail do remetente</label>
+                        <label class="form-label" for="smtp_from_address">E-mail do remetente<?= in_array('smtp_from_address', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_from_address" name="smtp_from_address" type="email"
                             value="<?= htmlspecialchars($settings['smtp_from_address'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="smtp_from_name">Nome do remetente</label>
+                        <label class="form-label" for="smtp_from_name">Nome do remetente<?= in_array('smtp_from_name', $smtpFromEnv, true) ? ' <span class="badge text-bg-info">.env</span>' : '' ?></label>
                         <input class="form-control" id="smtp_from_name" name="smtp_from_name" type="text"
                             value="<?= htmlspecialchars($settings['smtp_from_name'], ENT_QUOTES, 'UTF-8') ?>">
                     </div>

@@ -63,3 +63,43 @@ it('configure() seta CharSet UTF-8 e os dados de SMTP no objeto PHPMailer', func
     assertSame(2525, $mail->Port);
     assertSame('usuario', $mail->Username);
 });
+
+it('variaveis SMTP_* do .env tem prioridade sobre a tela de configuracoes', function (): void {
+    $base = ['smtp_host' => 'tela.exemplo.com', 'smtp_port' => '25', 'smtp_encryption' => 'none', 'smtp_username' => 'u',
+        'smtp_password' => 'p', 'smtp_from_address' => 'a@x.com', 'smtp_from_name' => 'Tela'];
+    putenv('SMTP_HOST=env.exemplo.com');
+    putenv('SMTP_PASSWORD=senha-do-env');
+
+    try {
+        $config = \App\Core\Mail\SmtpMailer::resolveConfig($base);
+        assertSame('env.exemplo.com', $config['smtp_host']);
+        assertSame('senha-do-env', $config['smtp_password']);
+        assertSame('25', $config['smtp_port'], 'o que nao esta no .env continua vindo da tela');
+        assertSame('none', $config['smtp_encryption']);
+        assertSame(['smtp_host', 'smtp_password'], \App\Core\Mail\SmtpMailer::envOverriddenKeys());
+    } finally {
+        putenv('SMTP_HOST');
+        putenv('SMTP_PASSWORD');
+    }
+});
+
+it('criptografia invalida vira tls', function (): void {
+    putenv('SMTP_ENCRYPTION=xpto');
+
+    try {
+        assertSame('tls', \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_encryption' => 'none'])['smtp_encryption']);
+    } finally {
+        putenv('SMTP_ENCRYPTION');
+    }
+});
+
+it('SMTP_PASSWORD vazio no .env nao apaga a senha salva', function (): void {
+    putenv('SMTP_PASSWORD=');
+
+    try {
+        assertSame('salva', \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_password' => 'salva'])['smtp_password']);
+        assertSame([], \App\Core\Mail\SmtpMailer::envOverriddenKeys());
+    } finally {
+        putenv('SMTP_PASSWORD');
+    }
+});

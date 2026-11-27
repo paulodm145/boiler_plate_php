@@ -23,6 +23,7 @@ class AdminSettingController
             'user' => Auth::user(),
             'settings' => $this->settings->all(),
             'success' => ($_GET['saved'] ?? '') === '1',
+            'smtpFromEnv' => \App\Core\Mail\SmtpMailer::envOverriddenKeys(),
             'pendingCount' => (new InstallState(dirname(__DIR__, 2)))->pendingCount(),
         ]);
     }
