@@ -4,9 +4,15 @@ namespace App\Repositories;
 
 use App\Helpers\Uuid;
 use App\Database\Database;
+use App\Database\Page;
+use App\Database\Paginator;
+use App\Http\ListQuery;
 
 class UserRepository
 {
+    /** Colunas ordenaveis da listagem: chave da URL => coluna. */
+    public const SORTABLE = ['name' => 'name', 'email' => 'email', 'created' => 'created_at'];
+
     private $database;
 
     public function __construct(?Database $database = null)
@@ -33,6 +39,21 @@ class UserRepository
     public function all(): array
     {
         return $this->database->fetchAll('SELECT id, uuid, name, email, created_at FROM users ORDER BY name');
+    }
+
+    /** Listagem do admin: busca por nome ou e-mail, sem id interno nem hash. */
+    public function paginate(ListQuery $list): Page
+    {
+        $sql = 'SELECT uuid, name, email, created_at FROM users';
+        $params = [];
+
+        if ($list->search() !== '') {
+            // Um placeholder por ocorrencia: com prepares nativos o mesmo nome nao pode repetir.
+            $sql .= ' WHERE name LIKE :q_name OR email LIKE :q_email';
+            $params = ['q_name' => '%' . $list->search() . '%', 'q_email' => '%' . $list->search() . '%'];
+        }
+
+        return Paginator::sql($this->database, $sql, $params, $list, 'id ASC');
     }
 
     public function count(): int

@@ -5,175 +5,131 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\ErrorPage;
 use App\Core\InstallState;
-use App\Core\Validator;
 use App\Core\View;
+use App\Http\Flash;
+use App\Http\ListQuery;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Repositories\UserRepository;
+use App\Services\User\UserService;
+use App\Validation\ValidationException;
 
+/**
+ * Exemplo de referencia das camadas: le a requisicao pelo FormRequest, chama
+ * o UserService e escolhe a resposta. Sem SQL, sem regra de negocio e sem
+ * metodo privado de validacao. Entrada invalida volta ao formulario sozinha
+ * (ValidationException tratada no Router).
+ */
 class AdminUserController
 {
-    private $users;
-    private $rootPath;
+    private UserService $users;
 
     public function __construct()
     {
-        $this->users = new UserRepository();
-        $this->rootPath = dirname(__DIR__, 2);
+        $this->users = new UserService();
     }
 
     public function index(): void
     {
-        View::render('admin/users', [
-            'title' => 'Usuarios | Admin',
-            'user' => Auth::user(),
-            'users' => $this->users->all(),
-            'pendingCount' => $this->pendingMigrationsCount(),
-        ]);
+        $list = ListQuery::fromRequest(UserRepository::SORTABLE, 'name');
+        $data = ['page' => $this->users->list($list), 'list' => $list];
+
+        if ($list->isPartial()) {
+            View::render('admin/partials/users-table', $data);
+
+            return;
+        }
+
+        View::render('admin/users', $data + $this->shell('Usuários | Admin'));
     }
 
     public function create(): void
     {
         View::render('admin/user-form', [
-            'title' => 'Novo usuario | Admin',
-            'user' => Auth::user(),
-            'adminUser' => ['id' => null, 'name' => '', 'email' => ''],
+            'adminUser' => ['uuid' => null, 'name' => '', 'email' => ''],
             'isNew' => true,
-            'error' => null,
-            'pendingCount' => $this->pendingMigrationsCount(),
-        ]);
+        ] + $this->shell('Novo usuário | Admin'));
     }
 
     public function store(): void
     {
-        $name = trim((string) ($_POST['name'] ?? ''));
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $error = $this->validate($name, $email, (string) ($_POST['password'] ?? ''), null);
+        $data = StoreUserRequest::validate();
+        $result = $this->users->create($data);
 
-        if ($error !== null) {
-            View::render('admin/user-form', [
-                'title' => 'Novo usuario | Admin',
-                'user' => Auth::user(),
-                'adminUser' => ['id' => null, 'name' => $name, 'email' => $email],
-                'isNew' => true,
-                'error' => $error,
-                'pendingCount' => $this->pendingMigrationsCount(),
-            ]);
-            return;
+        if (!$result->isOk()) {
+            throw ValidationException::withMessages(['email' => $result->message()], $data, '/admin/users/create');
         }
 
-        $this->users->create($_POST);
-        header('Location: /admin/users');
+        Flash::success('Usuário criado.');
+        $this->redirect('/admin/users');
     }
 
     public function edit(string $userUuid): void
     {
-        $user = $this->users->findByUuid($userUuid);
+        $user = $this->users->find($userUuid);
 
         if ($user === null) {
             ErrorPage::notFound();
+
             return;
         }
 
-        View::render('admin/user-form', [
-            'title' => 'Editar usuario | Admin',
-            'user' => Auth::user(),
-            'adminUser' => $user,
-            'isNew' => false,
-            'error' => null,
-            'pendingCount' => $this->pendingMigrationsCount(),
-        ]);
+        View::render('admin/user-form', ['adminUser' => $user, 'isNew' => false] + $this->shell('Editar usuário | Admin'));
     }
 
     public function update(string $userUuid): void
     {
-        $user = $this->users->findByUuid($userUuid);
+        $request = new UpdateUserRequest($userUuid);
+        $result = $this->users->update($userUuid, $request->validated());
 
-        if ($user === null) {
+        if ($result->code() === 'not_found') {
             ErrorPage::notFound();
+
             return;
         }
 
-        $name = trim((string) ($_POST['name'] ?? ''));
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $error = $this->validate($name, $email, (string) ($_POST['password'] ?? ''), (int) $user['id']);
-
-        if ($error !== null) {
-            View::render('admin/user-form', [
-                'title' => 'Editar usuario | Admin',
-                'user' => Auth::user(),
-                'adminUser' => ['id' => (int) $user['id'], 'uuid' => $userUuid, 'name' => $name, 'email' => $email],
-                'isNew' => false,
-                'error' => $error,
-                'pendingCount' => $this->pendingMigrationsCount(),
-            ]);
-            return;
+        if ($result->code() === 'email_taken') {
+            throw ValidationException::withMessages(['email' => $result->message()], $_POST, $request->redirectTo());
         }
 
-        $this->users->update((int) $user['id'], $_POST);
-        header('Location: /admin/users');
+        Flash::success('Usuário atualizado.');
+        $this->redirect('/admin/users');
     }
 
     public function delete(string $userUuid): void
     {
-        $user = $this->users->findByUuid($userUuid);
+        $result = $this->users->delete($userUuid, (array) Auth::user());
 
-        if ($user === null) {
+        if ($result->code() === 'not_found') {
             ErrorPage::notFound();
+
             return;
         }
 
-        $currentUser = Auth::user();
+        if (!$result->isOk()) {
+            Flash::error((string) $result->message());
+            $this->redirect('/admin/users/' . $userUuid . '/edit');
 
-        if (($currentUser['uuid'] ?? null) === $userUuid) {
-            http_response_code(422);
-            View::render('admin/user-form', [
-                'title' => 'Editar usuario | Admin',
-                'user' => $currentUser,
-                'adminUser' => $user,
-                'isNew' => false,
-                'error' => 'Voce nao pode excluir o proprio usuario.',
-                'pendingCount' => $this->pendingMigrationsCount(),
-            ]);
             return;
         }
 
-        $this->users->delete((int) $user['id']);
-        header('Location: /admin/users');
+        Flash::success('Usuário excluído.');
+        $this->redirect('/admin/users');
     }
 
-    // $excludeUserId: null pra um usuario novo (store()); o id do proprio
-    // usuario pra edicao (update()), pra nao rejeitar o e-mail dele mesmo
-    // sem ter mudado. $password vazio so e permitido quando $excludeUserId
-    // nao e null (update sem trocar a senha) — UserRepository::update() ja
-    // preserva o hash existente nesse caso.
-    private function validate(string $name, string $email, string $password, ?int $excludeUserId): ?string
+    /** Dados do layout do admin (titulo, usuario logado, aviso de migrations). */
+    private function shell(string $title): array
     {
-        if (!Validator::required($name) || !Validator::required($email)) {
-            return 'Informe o nome e o e-mail.';
-        }
-
-        if (!Validator::email($email)) {
-            return 'Informe um e-mail valido.';
-        }
-
-        if ($password !== '' && !Validator::minLength($password, 8)) {
-            return 'A senha precisa de pelo menos 8 caracteres.';
-        }
-
-        if ($excludeUserId === null && $password === '') {
-            return 'Informe uma senha.';
-        }
-
-        $existing = $this->users->findByEmail($email);
-
-        if ($existing !== null && ($excludeUserId === null || (int) $existing['id'] !== $excludeUserId)) {
-            return 'Este e-mail ja esta em uso.';
-        }
-
-        return null;
+        return [
+            'title' => $title,
+            'user' => Auth::user(),
+            'pendingCount' => (new InstallState(dirname(__DIR__, 2)))->pendingCount(),
+        ];
     }
 
-    private function pendingMigrationsCount(): int
+    private function redirect(string $path): void
     {
-        return (new InstallState($this->rootPath))->pendingCount();
+        http_response_code(303);
+        header('Location: ' . $path);
     }
 }

@@ -166,7 +166,6 @@ require_once __DIR__ . '/tests/router_middleware_test.php';
 require_once __DIR__ . '/tests/model_test.php';
 require_once __DIR__ . '/tests/asset_test.php';
 require_once __DIR__ . '/tests/icon_test.php';
-require_once __DIR__ . '/tests/admin_user_validation_test.php';
 require_once __DIR__ . '/tests/database_test.php';
 require_once __DIR__ . '/tests/rate_limiter_test.php';
 require_once __DIR__ . '/tests/admin_auth_throttle_test.php';
@@ -186,6 +185,8 @@ require_once __DIR__ . '/tests/database_transaction_test.php';
 require_once __DIR__ . '/tests/validator_test.php';
 require_once __DIR__ . '/tests/form_request_test.php';
 require_once __DIR__ . '/tests/pagination_test.php';
+require_once __DIR__ . '/tests/user_service_test.php';
+require_once __DIR__ . '/tests/user_requests_test.php';
 
 foreach ($GLOBALS['test_temp_dirs'] as $dir) {
     removeDir($dir);

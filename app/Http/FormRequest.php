@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Database\Database;
 use App\Validation\ValidationException;
 use App\Validation\Validator;
 
@@ -16,6 +17,8 @@ use App\Validation\Validator;
  */
 abstract class FormRequest
 {
+    private ?Database $database = null;
+
     /** @return array<string, string|array> */
     abstract public function rules(): array;
 
@@ -49,11 +52,23 @@ abstract class FormRequest
         return $validated;
     }
 
+    /** Conexao das regras unique/exists (padrao: Database::shared()); os testes injetam a do banco de teste. */
+    public function withDatabase(Database $database): static
+    {
+        $this->database = $database;
+
+        return $this;
+    }
+
     /** Valida a entrada (padrao: a da requisicao) e devolve os dados transformados. */
     public function validated(?array $input = null): array
     {
         $input = $this->prepare($input ?? static::input());
         $validator = Validator::make($input, $this->rules(), $this->messages(), $this->attributes());
+
+        if ($this->database !== null) {
+            $validator->setDatabase($this->database);
+        }
 
         if ($validator->fails()) {
             throw new ValidationException($validator->errors(), ValidationException::withoutSecrets($input), $this->redirectTo());
