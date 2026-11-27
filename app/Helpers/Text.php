@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Core;
+namespace App\Helpers;
 
 class Text
 {
@@ -46,5 +46,15 @@ class Text
         }
 
         return rtrim($cut, " .,;:") . '…';
+    }
+
+    /** Trecho em texto puro de um HTML (editor rico): blocos viram espaco, entidades sao decodificadas. */
+    public static function plainExcerpt(string $html, int $max): string
+    {
+        $blocksAsSpaces = preg_replace('#<(br|/p|/div|/li|/h[1-6]|/blockquote)[^>]*>#i', ' ', $html);
+        $text = html_entity_decode(strip_tags((string) $blocksAsSpaces), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim((string) preg_replace('/[\s\x{00A0}]+/u', ' ', $text));
+
+        return mb_strlen($text) > $max ? rtrim(mb_substr($text, 0, $max)) . '…' : $text;
     }
 }

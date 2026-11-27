@@ -1,6 +1,6 @@
 <?php
 /** @var string $title */
-use App\Core\Asset;
+use App\Helpers\Asset;
 ?>
 <!doctype html>
 <html lang="pt-BR">

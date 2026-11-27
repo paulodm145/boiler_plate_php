@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Asset;
+use App\Helpers\Asset;
 
 echo "\nAsset\n";
 

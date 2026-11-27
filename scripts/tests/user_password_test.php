@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Uuid;
+use App\Helpers\Uuid;
 use App\Database\Database;
 use App\Repositories\UserRepository;
 

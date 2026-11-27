@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Core;
+namespace App\Helpers;
 
 /**
  * Cache-busting simples pra assets estaticos (?v=<mtime do arquivo>).
@@ -19,5 +19,13 @@ class Asset
         $mtime = filemtime($file);
 
         return $mtime === false ? '1' : (string) $mtime;
+    }
+
+    /** URL de um arquivo de public/assets/ com ?v=filemtime ('1' se nao existir): Asset::url('css/app.css'). */
+    public static function url(string $path): string
+    {
+        $path = ltrim($path, '/');
+
+        return '/assets/' . $path . '?v=' . self::version('assets/' . $path);
     }
 }

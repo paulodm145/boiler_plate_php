@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Core;
+namespace App\Helpers;
 
 /**
  * Gera UUIDv4 via random_bytes(), sem depender da extensao "uuid" do PHP

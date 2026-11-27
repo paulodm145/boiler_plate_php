@@ -19,6 +19,7 @@ require_once $rootPath . '/app/Core/Autoloader.php';
 
 $autoloader = new Autoloader($rootPath . '/app');
 $autoloader->register();
+require_once $rootPath . '/app/functions.php';
 
 // Cedo, antes do .env: excecao, erro PHP e fatal vao para o log e para a
 // pagina 500 com request_id (nada de tela em branco nem caminho de arquivo

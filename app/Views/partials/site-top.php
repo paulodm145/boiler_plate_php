@@ -1,8 +1,8 @@
 <?php
 
-use App\Core\Asset;
+use App\Helpers\Asset;
 use App\Core\Env;
-use App\Core\Text;
+use App\Helpers\Text;
 
 $siteName = $settings['site_name'] ?? 'App Boilerplate';
 $active = $active ?? '';
