@@ -6,10 +6,21 @@ Options -Indexes
 # pagina de erro estilizada do site.
 ErrorDocument 403 /erro-acesso-negado
 
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
 RewriteEngine On
 
 RewriteRule ^(\.env|\.env\.install)$ - [F,L]
-RewriteRule ^(app|database|scripts|storage)/ - [F,L]
+RewriteRule ^(app|database|scripts|storage|lib|docs|docker)/ - [F,L]
+# Quando o document root e a raiz do projeto (hospedagem compartilhada),
+# nada fora de public/ deve ser servido direto: arquivos ocultos, codigo e
+# documentacao da raiz.
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+RewriteRule ^(routes\.php|.*\.(md|yml|yaml|sql|sh|lock|example|docker))$ - [F,L]
 
 RewriteCond %{REQUEST_URI} !^/public/
 RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]

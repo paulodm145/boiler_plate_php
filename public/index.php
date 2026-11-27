@@ -11,6 +11,7 @@ use App\Core\InstallState;
 use App\Core\InstallRoutes;
 use App\Core\Logger;
 use App\Core\Router;
+use App\Http\SecurityHeaders;
 
 $rootPath = dirname(__DIR__);
 
@@ -30,6 +31,7 @@ ErrorHandler::showErrorsOnScreen(Env::get('APP_DEBUG', 'false') === 'true');
 
 // Precisa iniciar a sessao aqui, bem cedo — antes de qualquer output.
 Auth::start();
+SecurityHeaders::send();
 
 if (!(new InstallState($rootPath))->isInstalled()) {
     InstallRoutes::handle($_SERVER['REQUEST_METHOD'] ?? 'GET', $_SERVER['REQUEST_URI'] ?? '/');
