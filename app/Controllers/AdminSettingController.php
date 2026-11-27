@@ -5,32 +5,36 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\InstallState;
 use App\Core\View;
-use App\Repositories\SettingRepository;
+use App\Http\Flash;
+use App\Http\Requests\UpdateSettingsRequest;
+use App\Services\Settings\SettingsService;
 
 class AdminSettingController
 {
-    private $settings;
+    private SettingsService $settings;
 
     public function __construct()
     {
-        $this->settings = new SettingRepository();
+        $this->settings = new SettingsService();
     }
 
     public function edit(): void
     {
         View::render('admin/settings', [
-            'title' => 'Configuracoes | Admin',
+            'title' => 'Configurações | Admin',
             'user' => Auth::user(),
             'settings' => $this->settings->all(),
-            'success' => ($_GET['saved'] ?? '') === '1',
-            'smtpFromEnv' => \App\Core\Mail\SmtpMailer::envOverriddenKeys(),
+            'smtpFromEnv' => $this->settings->smtpFromEnv(),
             'pendingCount' => (new InstallState(dirname(__DIR__, 2)))->pendingCount(),
         ]);
     }
 
     public function update(): void
     {
-        $this->settings->update($_POST);
-        header('Location: /admin/settings?saved=1');
+        $this->settings->update(UpdateSettingsRequest::validate());
+
+        Flash::success('Configurações salvas.');
+        http_response_code(303);
+        header('Location: /admin/settings');
     }
 }

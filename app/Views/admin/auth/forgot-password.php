@@ -8,17 +8,19 @@
                     <h1 class="h4 mb-4">Esqueci minha senha</h1>
 
                     <?php if ($error !== null): ?>
-                        <div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+                        <div class="alert alert-danger"><?= e($error) ?></div>
                     <?php endif; ?>
+                    <?php require dirname(__DIR__) . '/partials/form-errors.php'; ?>
 
                     <?php if ($message !== null): ?>
-                        <div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+                        <div class="alert alert-success"><?= e($message) ?></div>
                     <?php else: ?>
-                        <form method="post" action="/admin/esqueci-senha">
+                        <form method="post" action="/admin/esqueci-senha" novalidate>
                             <?= \App\Core\Csrf::field() ?>
                             <div class="mb-4">
                                 <label class="form-label" for="email">E-mail</label>
-                                <input class="form-control" id="email" type="email" name="email" required autofocus>
+                                <input class="form-control<?= \App\Http\Form::invalid('email') ?>" id="email" type="email" name="email" value="<?= e(old('email')) ?>" required autofocus>
+                                <?= \App\Http\Form::feedback('email') ?>
                             </div>
                             <button class="btn btn-primary w-100" type="submit">Enviar link de redefinição</button>
                         </form>

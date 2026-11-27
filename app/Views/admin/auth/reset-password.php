@@ -8,15 +8,21 @@
                     <h1 class="h4 mb-4">Redefinir senha</h1>
 
                     <?php if ($error !== null): ?>
-                        <div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+                        <div class="alert alert-danger"><?= e($error) ?></div>
                     <?php endif; ?>
+                    <?php require dirname(__DIR__) . '/partials/form-errors.php'; ?>
 
                     <?php if ($validToken): ?>
-                        <form method="post" action="/admin/redefinir-senha/<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>">
+                        <form method="post" action="/admin/redefinir-senha/<?= e($token) ?>" novalidate>
                             <?= \App\Core\Csrf::field() ?>
+                            <div class="mb-3">
+                                <label class="form-label" for="password">Nova senha <span class="text-danger">*</span></label>
+                                <input class="form-control<?= \App\Http\Form::invalid('password') ?>" id="password" type="password" name="password" autocomplete="new-password" required>
+                                <?= \App\Http\Form::feedback('password') ?>
+                            </div>
                             <div class="mb-4">
-                                <label class="form-label" for="password">Nova senha</label>
-                                <input class="form-control" id="password" type="password" name="password" required>
+                                <label class="form-label" for="password_confirmation">Confirme a nova senha <span class="text-danger">*</span></label>
+                                <input class="form-control<?= \App\Http\Form::invalid('password') ?>" id="password_confirmation" type="password" name="password_confirmation" autocomplete="new-password" required>
                             </div>
                             <button class="btn btn-primary w-100" type="submit">Salvar nova senha</button>
                         </form>
