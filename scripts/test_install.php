@@ -177,6 +177,7 @@ require_once __DIR__ . '/tests/password_reset_service_test.php';
 require_once __DIR__ . '/tests/settings_service_test.php';
 require_once __DIR__ . '/tests/uploaded_files_test.php';
 require_once __DIR__ . '/tests/storage_test.php';
+require_once __DIR__ . '/tests/file_response_test.php';
 require_once __DIR__ . '/tests/csrf_test.php';
 require_once __DIR__ . '/tests/csrf_forms_test.php';
 require_once __DIR__ . '/tests/log_path_test.php';
