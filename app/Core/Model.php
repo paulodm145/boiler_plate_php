@@ -3,6 +3,7 @@
 namespace App\Core;
 
 use App\Database\Database;
+use App\Helpers\Uuid;
 use DateTime;
 use DateTimeZone;
 use ReflectionMethod;

@@ -14,6 +14,7 @@ require_once $rootPath . '/app/Core/Autoloader.php';
 
 $autoloader = new Autoloader($rootPath . '/app');
 $autoloader->register();
+require_once $rootPath . '/app/functions.php';
 
 Env::load($rootPath . '/.env');
 ErrorHandler::register($rootPath);

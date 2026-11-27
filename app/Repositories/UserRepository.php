@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Core\Uuid;
+use App\Helpers\Uuid;
 use App\Database\Database;
 
 class UserRepository

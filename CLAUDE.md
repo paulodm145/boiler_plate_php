@@ -56,10 +56,10 @@ Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deli
 **Layers:**
 - `App\Controllers` — one class per feature area, HTTP-flow only.
 - `App\Repositories` — thin query wrappers around `App\Database\Database` (a PDO wrapper: `fetch`/`fetchAll`/`execute`). Repositories return plain arrays; for simple lookups they may use the `Model`/`QueryBuilder` layer below, and complex queries are written as plain SQL. Each repository takes an optional `Database` in its constructor (`?Database $database = null`) so tests can inject an isolated connection.
-- `App\Core` — the framework-shaped pieces: `Router` (with a middleware pipeline, see below), `Auth`, `Csrf`, `Env`/`EnvWriter` (hand-rolled `.env` parser/writer), `View` (plain `require` of a PHP template, no template engine), `Migrator`, `InstallState`, `Requirements`, `Logger`/`ErrorHandler` (see Errors & logging), `ErrorPage` (HTML or JSON depending on the request), `Mail\SmtpMailer`, `Text::slugify()`/`Text::truncate()`, `Uuid::v4()` (random-bytes based, no PHP `uuid` extension needed — reach for it when an entity needs a public identifier that shouldn't be a guessable auto-increment id).
+- `App\Core` — the framework-shaped pieces: `Router` (with a middleware pipeline, see below), `Auth`, `Csrf`, `Env`/`EnvWriter` (hand-rolled `.env` parser/writer), `View` (plain `require` of a PHP template, no template engine), `Migrator`, `InstallState`, `Requirements`, `Logger`/`ErrorHandler` (see Errors & logging), `ErrorPage` (HTML or JSON depending on the request), `Mail\SmtpMailer`, `Icon`. Generic utilities don't belong here — they go to `App\Helpers`.
 - `App\Core\Model` + `QueryBuilder` + `Relations\*` (`HasOne`, `HasMany`, `BelongsTo`, `BelongsToMany`) — a small active-record layer for **simple** queries (find by key, filtered lists, simple relations); see `App\Models\User` and `scripts/tests/model_test.php`. **Complex queries (several joins, aggregations, subqueries, reports) use plain SQL through `App\Database\Database`** inside a repository — don't stretch the QueryBuilder to cover them.
 - `App\Http` — pieces that know about the HTTP request but not about business rules. Today: `SecurityHeaders`.
-- `App\Helpers` — pure utilities (no request, no business rules). Today: `LogPath`.
+- `App\Helpers` — pure utilities: no request, no business rules, no state. See "Helpers: what already exists" below before writing text, date, number or input handling by hand.
 - `App\Core\Middleware` — `MiddlewareInterface::handle(array $routeParams): ?string` (`null` = continue, a string = redirect to that Location, `Router::HALT` = response already sent, e.g. by `ErrorPage::forbidden()` — stop, don't redirect). `Router::get/post($path, $handler, $middleware = [])` takes an array of middleware — either a class name (instantiated with no constructor args) or an already-built instance for middleware that needs a parameter (follow `RequireRole::organizer()`-style static factories if you add one). `Router::resolve()` does the matching + runs the middleware chain with no side effects (no `header()`, no instantiating the controller) and returns a result array; `Router::dispatch()` acts on that result. This separation is what makes the middleware chain unit-testable — see `scripts/tests/router_middleware_test.php`. Only `/admin/*` routes use `RequireAuth::class` today; add more middlewares under `App\Core\Middleware` the same way (e.g. a `RequireRole` or a tenant resolver, if the project you're building on this needs one).
 - `App\Views` — plain PHP templates. The install wizard uses the `ob_start()` → build `$content` → `require '.../layout.php'` pattern. Admin pages `require partials/shell-top.php` then `partials/shell-bottom.php` around inline markup — see any `app/Views/admin/*.php`. Public pages do the same with `partials/site-top.php`/`site-bottom.php`.
 
@@ -75,7 +75,41 @@ Hand-rolled MVC, zero third-party runtime dependencies, zero build step — deli
 
 **Auth:** `App\Core\Auth` is a static wrapper over `$_SESSION['user']` (`id`, `uuid`, `name`, `email`, `is_admin`). This boilerplate ships a single flat role (any logged-in user can reach `/admin/*`) — `UserRepository::verifyPassword()` also transparently upgrades legacy 32-char MD5 hashes to `password_hash()` on successful login, useful if `users` ever gets seeded/imported data from elsewhere. If the project built on this needs real roles or multi-tenancy, follow the pattern `mydaily` used on top of the same boilerplate: a `Tenant` static registry (same shape as `Auth`) set only by a `ResolveTenant` middleware, tenant-scoped repositories taking the tenant id as a **required, non-nullable constructor argument**, and a `RequireRole` middleware built the same way as `RequireAuth`.
 
-**Public identifiers:** internal `id INT AUTO_INCREMENT` shouldn't leave the data layer — avoid it in URLs, forms, or responses for anything sensitive. `App\Core\Uuid::v4()` is there for tables that need a public identifier; `App\Core\Text::slugify()` (transliterates accents rather than stripping them) is there for human-readable slugs when a table wants nicer URLs instead of a uuid.
+**Public identifiers:** internal `id INT AUTO_INCREMENT` shouldn't leave the data layer — avoid it in URLs, forms, or responses for anything sensitive. `App\Helpers\Uuid::v4()` is there for tables that need a public identifier; `App\Helpers\Text::slugify()` (transliterates accents rather than stripping them) is there for human-readable slugs when a table wants nicer URLs instead of a uuid.
+
+## Helpers: what already exists
+
+Before writing text, date, number or input handling by hand, look here. `App\Helpers` is pure (no request, no business rules, no state). Simple helpers have **no unit tests by the owner's decision** — the code that uses them (validation rules, services) is tested at its own level.
+
+| Class | What for | Example |
+|---|---|---|
+| `Str` | UTF-8-safe text, Laravel-style (`after`, `before`, `between`, `contains`, `limit`, `words`, `squish`, `ascii`, `slug`, `camel`, `snake`, `kebab`, `mask`, `digits`, `alnum`, `random`...) | `Str::limit($title, 60)` |
+| `Arr` | Nested arrays with dot keys, and lists of DB rows (`get`, `set`, `has`, `only`, `except`, `pluck`, `keyBy`, `groupBy`, `sortBy`, `sum`...) | `Arr::pluck($users, 'name', 'uuid')` |
+| `Number` | Brazilian number format without `intl` (`format`, `percentage`, `fileSize`, `abbreviate`, `parse`, `clamp`) | `Number::format($kg, 3) . ' kg'` → `1.234,567 kg` |
+| `Text` | Public slug (transliterates accents), truncation, plain-text excerpt of HTML | `Text::slugify('Ação')` → `acao` |
+| `Mask` | Pattern masks (`Mask::CPF`, `CNPJ`, `CEP`, `PHONE`, `MOBILE` or `'##.###'`); letters pass, for the alphanumeric CNPJ | `Mask::apply($digits, Mask::CEP)` |
+| `Lgpd` | Hide personal data **on display only** (`cpf`, `cnpj`, `email`, `phone`, `name`, `cep`, `ip`, `hide`) | `Lgpd::email('ana@x.com')` |
+| `Br\Cpf`, `Br\Cnpj`, `Br\Cep`, `Br\Phone` | `clean`, `isValid`, `format` (+ `Cnpj::isAlphanumeric`, `checkDigits`; `Phone::isMobile`) | `Cnpj::isValid('12.ABC.345/01DE-35')` |
+| `Br\Date` | `dd/mm/aaaa` ↔ `aaaa-mm-dd`; impossible dates → `null` | `Br\Date::parse('24/11/2026')` |
+| `DateOnly` | Calendar dates (`Y-m-d`) without timezone: `normalize`, `shift`, `daysBetween` | `DateOnly::shift($day, 7)` |
+| `DateFormat` | Portuguese dates: `full` (`24 de novembro de 2026`), `long` (`terça-feira, 24 de nov de 2026`), `numeric` (`24/11/2026`), `short`, `shortRange` | `DateFormat::full($date)` |
+| `LocalTime` | App local time ↔ UTC of the DB (`isClockTime`, `toUtc`, `fromUtc`) | `LocalTime::toUtc('2026-11-24 09:00')` |
+| `Duration` | Minutes → label | `Duration::label(90)` → `1h30` |
+| `MoneyFormat` | Cents → money text (BRL default, USD) | `MoneyFormat::format(123456)` → `R$ 1.234,56` |
+| `Input` | Normalize posted values: `string`, `nullableString`, `nullableInt`, `accessEmail`, `isDigitsOrBlank`, `time` (→ `HH:MM:SS` or `null`), `duration`, `money` (→ cents), `cents`, `decimal` (BR text → decimal string), `decimalFromNumberField` (`<input type="number">`, dot decimal), `date` (BR → `Y-m-d`) | `Input::money('1.234,56')` → `123456`; `Input::decimal('1.234,567', 3)` → `'1234.567'` |
+| `HtmlSanitizer` | Allowlist cleanup of rich-editor HTML before saving; `isSafeLink` | `HtmlSanitizer::clean($html)` |
+| `Color` | Only `#rgb`/`#rrggbb` from the DB reaches a `style=` | `Color::hexOr($color, '#6c757d')` |
+| `Url` | Absolute URL from `APP_URL` (e-mails) | `Url::absolute('/admin/login')` |
+| `Uuid` | UUID v4 from `random_bytes()` (no `uuid` extension) — public identifier instead of the auto-increment id | `Uuid::v4()` |
+| `Asset` | Cache-busted asset URL (`?v=filemtime`) | `Asset::url('css/app.css')` |
+| `LogPath` | Mask tokens in a URL path before logging | `LogPath::mask($path)` |
+| `e()` | Global HTML escape for views (`app/functions.php`); `null` → `''` | `<?= e($user['name']) ?>` |
+
+Rules:
+- **Money** is stored as integer cents (`Input::money` in, `MoneyFormat` out). **Decimals and weights** travel as decimal strings (`Input::decimal`, `DECIMAL` column). Never `float` on the way to the database.
+- **`Input::decimal` reads Brazilian text** (`1.234` = one thousand two hundred thirty-four). A `<input type="number">` always posts a dot decimal (`1.234` = 1,234), so read those with `Input::decimalFromNumberField` — mixing them up silently multiplies by 1000. Prefer masked text inputs (BR format) for money, weight and decimals.
+- **CNPJ is alphanumeric text** (IN RFB 2.229/2024: 12 `A-Z0-9` + 2 check digits) — never store it as a number.
+- **Every new view escapes with `e()`.** Replace existing `htmlspecialchars(...)` calls with `e()` only when touching that view for another reason.
 
 ## Coding constraints
 

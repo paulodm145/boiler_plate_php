@@ -27,22 +27,23 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 - [x] `.htaccess` da raiz bloqueando `lib/`, `docs/`, `docker/`, `routes.php`, arquivos ocultos e `*.md` (lorencine `faebe28`).
 - [x] SMTP pelo `.env` (`SMTP_*`), com precedência campo a campo sobre a tela de Configurações (lorencine `8665116`).
 - [x] `Logger` + `ErrorHandler` (mydaily): log diário com chaves sensíveis ocultas e página 500 com `request_id`.
-- [x] `SecurityHeaders` básicos (mydaily). Se entra CSP com nonce é decidido no design da fase 6.
+- [x] `SecurityHeaders` básicos (mydaily). O CSP com nonce entra na fase 6.
 - [x] Instalador: administrador opcional quando já há usuários (lorencine `19bbfb8`).
 - [x] CLAUDE.md: PHP 8.2, a política do QueryBuilder e a documentação de `Model`/`Relations`, que existem mas não estão documentados.
 
 ### Fase 2 — Helpers PHP (`App\Helpers`, puros)
-- [ ] Texto, arrays e números: `Str`, `Arr`, `Number`, `Text` (unificando com `Core\Text`), `Mask`, `Lgpd`.
-- [ ] Brasil: `Br\Cpf`, **`Br\Cnpj` alfanumérico**, `Br\Cep`, `Br\Phone`, unindo os formatos do `Core\Br` do lorencine (moeda, decimal e data).
-- [ ] Datas e dinheiro: `DateOnly`, `DateFormat`, `LocalTime`, `Duration`, `MoneyFormat`.
-- [ ] Entrada e saída: `Input` (`money("1.234,56")` → centavos sem passar por float, decimal, peso e data BR → `Y-m-d`), `JsonResponse`, `Url`, `Asset`.
-- [ ] Segurança: `HtmlSanitizer`, `FileName`, `ContentDisposition`, `Color`, `Uuid`.
-- [ ] Função global `e()`.
-- [ ] *A decidir no design:* quais helpers ganham teste. O mydaily dispensou testes nos helpers "estilo Laravel" (D-25), mas os validadores BR provavelmente devem ter.
+- [x] Texto, arrays e números: `Str`, `Arr`, `Number`, `Text` (unificando com `Core\Text`), `Mask`, `Lgpd`.
+- [x] Brasil: `Br\Cpf`, **`Br\Cnpj` alfanumérico**, `Br\Cep`, `Br\Phone`, unindo os formatos do `Core\Br` do lorencine (moeda, decimal e data).
+- [x] Datas e dinheiro: `DateOnly`, `DateFormat`, `LocalTime`, `Duration`, `MoneyFormat`.
+- [x] Entrada e saída: `Input` (`money("1.234,56")` → centavos sem passar por float, decimal, peso e data BR → `Y-m-d`) `Url`, `Asset` (`JsonResponse` foi para a fase 3).
+- [x] Segurança: `HtmlSanitizer`, `Color`, `Uuid` (`FileName` e `ContentDisposition` foram para a fase 4).
+- [x] Função global `e()`.
+- [x] Testes: nenhum para os helpers simples (decisão do dono, 2026-11-27).
 
 ### Fase 3 — Camadas, validação e paginação
 - [ ] Regra das camadas no CLAUDE.md, com tabela do que pode e do que não pode, mais `ServiceResult`.
 - [ ] `Database::transaction()` reentrante (mydaily).
+- [ ] `JsonResponse` (mydaily), que mapeia `ServiceResult` para status HTTP.
 - [ ] `FormRequest` com `rules()`, `messages()`, `validated()`, erros por campo, resumo e `old()`. Falha no form volta para o formulário; falha na API responde 422 em JSON.
 - [ ] `Validator` com regras por pipe, substituindo o `Core\Validator` atual:
   - gerais: `required`, `nullable`, `string`, `email`, `min`, `max`, `between`, `in`, `numeric`, `integer`, `regex`, `confirmed`, `same`, `date`, `before`, `after`, `unique`, `exists`, `file`, `mimes` (pelo conteúdo), `max_size`;
@@ -53,16 +54,17 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 
 ### Fase 4 — Infraestrutura
 - [ ] **E-mail:** classes `Mailable` (destinatário, assunto, view e dados), `Mailer` com `SmtpMailer` (PHPMailer) e `NullMailer`/log para dev e testes, templates em `Views/emails/` com `_layout`. A recuperação de senha passa a usar isso.
-- [ ] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
+- [ ] **Upload:** `UploadService` com o tipo pelo conteúdo (`finfo`), lista permitida, tamanho, nome `<uuid>.<ext>`, `FileName::clean`, `ContentDisposition` e `StoragePath::assertSafe`, mais `storage/` sem acesso web. `FileResponse` entrega com `nosniff`, `Content-Disposition` RFC 6266 e `sandbox`. Disco abstrato com `LocalDisk`. *S3 fica fora por enquanto.*
 - [ ] **Exportação:** base `Export` (Template Method), `CsvExport` (BOM, `;` e proteção contra fórmula), `PdfExport` (FPDF vendorizado em `lib/fpdf`) e `XlsxExport` (o `XlsxWriter` do lorencine adaptado à base). Guia em `docs/exportacao.md`.
 
 ### Fase 5 — API
-- [ ] Rotas `/api/v1/...` sem sessão, autenticadas por token guardado como SHA-256.
+- [ ] Rotas `/api/v1/...` sem sessão, com um ponto de encaixe para a autenticação (middleware), sem implementá-la.
 - [ ] `ApiRequest`, `ApiResponse` (formato padrão e erros com código), `FormRequest` respondendo 422 e a mesma classe de paginação da fase 3.
 - [ ] Endpoint de exemplo, `docs/api/doc-api.md` + `openapi.yaml`, e um teste que compara a documentação com as rotas.
-- [ ] *A decidir no design:* como o token é emitido (tela no admin?) e se há CORS.
+- [ ] **Autenticação da API (JWT) fica fora desta fase:** o dono vai desenvolvê-la numa tarefa separada, com instruções próprias.
 
 ### Fase 6 — Componentes JavaScript (sem dependências)
+- [ ] **CSP de scripts com nonce** entra nesta fase, junto com os componentes.
 - [ ] **Máscaras** aplicadas por atributo (`data-mask="cpf"`): CPF, **CNPJ alfanumérico**, CEP, telefone, data, moeda, peso, decimal, inteiro, e **máscara customizada** (`data-mask="##.###-AA"`).
 - [ ] **Calendário próprio:** mostra sempre `dd/mm/aaaa`, envia `aaaa-mm-dd` em campo oculto e não depende do idioma do navegador. Navegável pelo teclado.
 - [ ] **Helper de AJAX** sobre `fetch`: JSON, CSRF automático e tratamento de erro. Uma resposta 422 marca os campos.
@@ -75,6 +77,7 @@ Cada fase segue o mesmo caminho: design, plano, branch própria, TDD, suíte ver
 - [ ] Guia de uso e checklist "formulário novo" no CLAUDE.md.
 
 ## Fora do escopo (por enquanto)
-- S3, Redis e fila (existem no mydaily, mas são específicos de lá).
+- S3, Redis e fila: viram fases independentes, depois deste roteiro.
+- Autenticação da API com JWT: tarefa separada do dono.
 - Multi-tenancy (o padrão continua só documentado no CLAUDE.md).
 - Regras de negócio dos projetos de origem.
