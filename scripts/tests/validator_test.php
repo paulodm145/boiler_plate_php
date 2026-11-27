@@ -21,6 +21,15 @@ function validatorDb(): \App\Database\Database
     return $db;
 }
 
+/** Nos testes o arquivo nao veio de um upload HTTP; so aqui o is_uploaded_file() e trocado. */
+class TestFileValidator extends Validator
+{
+    protected function isUploadedFile(string $path): bool
+    {
+        return is_file($path);
+    }
+}
+
 function uploadedFile(string $contents, string $name): array
 {
     $path = tempDir() . '/' . $name;
@@ -84,8 +93,17 @@ it('confirmed e same', function (): void {
 it('date, before e after (literal ou outro campo)', function (): void {
     assertTrue(v(['d' => '2026-02-31'], ['d' => 'date'])->fails());
     assertTrue(v(['d' => '2026-11-24'], ['d' => 'date|before:2026-12-31'])->passes());
-    assertTrue(v(['start' => '2026-11-24', 'end' => '2026-11-20'], ['end' => 'date|after:start'])->fails());
-    assertTrue(v(['start' => '2026-11-24', 'end' => '2026-11-25'], ['end' => 'date|after:start'])->passes());
+    assertTrue(v(['start' => '2026-11-24', 'end' => '2026-11-20'], ['start' => 'date', 'end' => 'date|after:start'])->fails());
+    assertTrue(v(['start' => '2026-11-24', 'end' => '2026-11-25'], ['start' => 'date', 'end' => 'date|after:start'])->passes());
+});
+
+it('before/after com data literal ignora campo enviado com o mesmo nome', function (): void {
+    // Quem envia o formulario nao pode trocar a data limite mandando um campo "2026-12-31".
+    assertTrue(v(['d' => '2027-06-01', '2026-12-31' => '2099-01-01'], ['d' => 'date|before:2026-12-31'])->fails());
+});
+
+it('before/after so usam outro campo se ele tem regra', function (): void {
+    assertTrue(v(['end' => '2026-11-25', 'start' => '2026-11-24'], ['end' => 'date|after:start'])->fails());
 });
 
 it('unique com e sem ignorar o proprio registro, e exists', function (): void {
@@ -110,10 +128,25 @@ it('unique com nome de tabela invalido lanca excecao', function (): void {
 it('file, mimes pelo conteudo e max_size', function (): void {
     $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
 
-    assertTrue(v(['f' => uploadedFile($png, 'a.png')], ['f' => 'file|mimes:png'])->passes());
-    assertTrue(v(['f' => uploadedFile('nao sou imagem', 'b.png')], ['f' => 'file|mimes:png'])->fails());
-    assertTrue(v(['f' => uploadedFile(str_repeat('x', 2048), 'c.txt')], ['f' => 'file|max_size:1'])->fails());
-    assertTrue(v(['f' => 'texto'], ['f' => 'file'])->fails());
+    assertTrue(TestFileValidator::make(['f' => uploadedFile($png, 'a.png')], ['f' => 'file|mimes:png'])->passes());
+    assertTrue(TestFileValidator::make(['f' => uploadedFile('nao sou imagem', 'b.png')], ['f' => 'file|mimes:png'])->fails());
+    assertTrue(TestFileValidator::make(['f' => uploadedFile(str_repeat('x', 2048), 'c.txt')], ['f' => 'file|max_size:1'])->fails());
+    assertTrue(TestFileValidator::make(['f' => 'texto'], ['f' => 'file'])->fails());
+});
+
+it('arquivo que nao veio de upload HTTP nunca passa como file', function (): void {
+    // Um corpo JSON pode imitar $_FILES apontando para qualquer arquivo do servidor.
+    $forged = ['name' => 'x.png', 'tmp_name' => __FILE__, 'error' => 0, 'size' => 1];
+
+    assertTrue(v(['f' => $forged], ['f' => 'file'])->fails());
+    assertTrue(v(['f' => $forged], ['f' => 'mimes:txt'])->fails());
+});
+
+it('tamanho do arquivo vem do disco, nao do size informado pelo cliente', function (): void {
+    $file = uploadedFile(str_repeat('x', 4096), 'd.txt');
+    $file['size'] = 10;
+
+    assertTrue(TestFileValidator::make(['f' => $file], ['f' => 'file|max:1'])->fails());
 });
 
 it('cpf, cnpj alfanumerico, cep e phone', function (): void {

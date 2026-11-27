@@ -215,20 +215,32 @@ class Validator
         return is_string($value) || is_int($value) || is_float($value) ? (string) $value : null;
     }
 
+    /**
+     * Item de $_FILES enviado com sucesso. is_uploaded_file() garante que o caminho veio de
+     * um upload HTTP desta requisicao: um corpo JSON (ou POST) imitando $_FILES com
+     * "tmp_name": "/etc/passwd" nunca passa.
+     */
     private function isFile(mixed $value): bool
     {
         return is_array($value)
             && isset($value['tmp_name'], $value['error'])
             && $value['error'] === UPLOAD_ERR_OK
             && is_string($value['tmp_name'])
-            && is_file($value['tmp_name']);
+            && $this->isUploadedFile($value['tmp_name']);
+    }
+
+    /** Separado so para os testes, que nao tem upload HTTP de verdade. */
+    protected function isUploadedFile(string $path): bool
+    {
+        return is_uploaded_file($path);
     }
 
     /** Tamanho para min/max/between: KB do arquivo, valor numerico ou numero de caracteres. */
     private function size(mixed $value, array $names): ?float
     {
         if ($this->isFile($value)) {
-            return ((int) ($value['size'] ?? filesize($value['tmp_name']))) / 1024;
+            // Tamanho do disco: o "size" do array vem do cliente.
+            return ((int) filesize($value['tmp_name'])) / 1024;
         }
 
         $text = $this->text($value);
@@ -286,7 +298,7 @@ class Validator
 
         if (in_array($rule, ['same', 'before', 'after'], true)) {
             $other = $params[0] ?? '';
-            $replace[':other'] = array_key_exists($other, $this->data) || isset($this->attributes[$other])
+            $replace[':other'] = !$this->isIsoDate($other)
                 ? $this->attributeName($other)
                 : (Date::format($other) ?: $other);
         }
@@ -299,12 +311,29 @@ class Validator
         return $this->attributes[$field] ?? str_replace('_', ' ', $field);
     }
 
-    /** Valor de comparacao de before/after: outro campo da entrada ou uma data literal Y-m-d. */
+    /**
+     * Valor de comparacao de before/after. Um parametro que e data Y-m-d e sempre literal;
+     * so um parametro que nao e data e lido como outro campo, e so se esse campo tem regra
+     * (quem envia o formulario nao escolhe o limite mandando um campo com esse nome).
+     */
     private function dateParam(string $param): ?string
     {
-        $candidate = array_key_exists($param, $this->data) ? $this->text($this->data[$param]) : $param;
+        if ($this->isIsoDate($param)) {
+            return $param;
+        }
 
-        return $candidate !== null && Date::parse($candidate) === $candidate && str_contains($candidate, '-') ? $candidate : null;
+        if (!array_key_exists($param, $this->rules)) {
+            return null;
+        }
+
+        $other = $this->text($this->data[$param] ?? null);
+
+        return $other !== null && $this->isIsoDate($other) ? $other : null;
+    }
+
+    private function isIsoDate(string $value): bool
+    {
+        return str_contains($value, '-') && Date::parse($value) === $value;
     }
 
     private function identifier(string $name): string
@@ -396,7 +425,7 @@ class Validator
     {
         $text = $this->text($value);
 
-        return $text !== null && str_contains($text, '-') && Date::parse($text) === $text;
+        return $text !== null && $this->isIsoDate($text);
     }
 
     protected function ruleBefore(mixed $value, array $params): bool
