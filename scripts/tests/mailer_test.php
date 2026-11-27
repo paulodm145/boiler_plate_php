@@ -75,7 +75,11 @@ it('variaveis SMTP_* do .env tem prioridade sobre a tela de configuracoes', func
         assertSame('env.exemplo.com', $config['smtp_host']);
         assertSame('senha-do-env', $config['smtp_password']);
         assertSame('u', $config['smtp_username'], 'o que nao esta no .env continua vindo da tela');
-        assertSame(['smtp_host', 'smtp_password'], \App\Core\Mail\SmtpMailer::envOverriddenKeys());
+        assertSame(
+            ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_password'],
+            \App\Core\Mail\SmtpMailer::envOverriddenKeys(),
+            'com a senha no .env, porta e criptografia tambem nao saem da tela'
+        );
     } finally {
         putenv('SMTP_HOST');
         putenv('SMTP_PASSWORD');

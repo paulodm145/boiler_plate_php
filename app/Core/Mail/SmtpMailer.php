@@ -57,10 +57,16 @@ class SmtpMailer implements MailerInterface
         return $settings;
     }
 
-    /** @return string[] chaves de settings que estao vindo do .env */
+    /** @return string[] chaves de settings que a tela nao controla (vem do .env), na ordem de ENV_KEYS */
     public static function envOverriddenKeys(): array
     {
-        return array_keys(self::envOverrides());
+        $overrides = self::envOverrides();
+
+        return array_values(array_filter(array_keys(self::ENV_KEYS), static function (string $key) use ($overrides): bool {
+            // Com a senha no .env, porta e criptografia tambem saem de la (padrao 587/tls).
+            return isset($overrides[$key])
+                || (isset($overrides['smtp_password']) && in_array($key, ['smtp_port', 'smtp_encryption'], true));
+        }));
     }
 
     /**
