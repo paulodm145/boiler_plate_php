@@ -131,9 +131,16 @@
         function step() {
             markRunning();
 
+            var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+
+            // So o /admin/atualizar manda token: as rotas do instalador nao usam CSRF.
+            if (options.csrfToken) {
+                headers['X-CSRF-Token'] = options.csrfToken;
+            }
+
             fetch(options.endpoint, {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: headers
             }).then(function (response) {
                 if (response.status === 401) {
                     fail('A sessao expirou. Faca login novamente para continuar a atualizacao.', {

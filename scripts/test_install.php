@@ -15,6 +15,12 @@ $autoloader->register();
 
 Env::load($rootPath . '/.env');
 
+// Varios testes renderizam views que chamam Auth::start(). Iniciada aqui,
+// antes de qualquer saida, a sessao nao gera "headers already sent" no CLI.
+ini_set('session.use_cookies', '0');
+ini_set('session.save_path', sys_get_temp_dir());
+session_start();
+
 $GLOBALS['test_failures'] = 0;
 $GLOBALS['test_count'] = 0;
 $GLOBALS['test_temp_dirs'] = [];
@@ -167,6 +173,8 @@ require_once __DIR__ . '/tests/setting_repository_test.php';
 require_once __DIR__ . '/tests/mailer_test.php';
 require_once __DIR__ . '/tests/password_reset_repository_test.php';
 require_once __DIR__ . '/tests/admin_password_reset_test.php';
+require_once __DIR__ . '/tests/csrf_test.php';
+require_once __DIR__ . '/tests/csrf_forms_test.php';
 
 foreach ($GLOBALS['test_temp_dirs'] as $dir) {
     removeDir($dir);

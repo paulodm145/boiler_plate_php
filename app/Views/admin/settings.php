@@ -9,6 +9,7 @@
             <?php endif; ?>
 
             <form method="post" action="/admin/settings">
+                <?= \App\Core\Csrf::field() ?>
                 <div class="mb-3">
                     <label class="form-label" for="site_name">Nome da aplicação</label>
                     <input class="form-control" id="site_name" name="site_name" type="text"

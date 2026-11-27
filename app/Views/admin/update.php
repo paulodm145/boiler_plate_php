@@ -33,7 +33,8 @@
 <script>
     window.startMigrationProgress({
         endpoint: '/admin/atualizar/run',
-        nextUrl: '/admin/atualizar'
+        nextUrl: '/admin/atualizar',
+        csrfToken: <?= json_encode(\App\Core\Csrf::token()) ?>
     });
 </script>
 <?php endif; ?>
