@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Autoloader;
 use App\Core\Env;
+use App\Core\ErrorHandler;
 use App\Core\Migrator;
 use App\Database\Database;
 
@@ -15,6 +16,7 @@ $autoloader = new Autoloader($rootPath . '/app');
 $autoloader->register();
 
 Env::load($rootPath . '/.env');
+ErrorHandler::register($rootPath);
 
 $results = (new Migrator(Database::shared(), $rootPath . '/database/migrations'))->run();
 

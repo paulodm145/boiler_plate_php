@@ -37,6 +37,12 @@ it('reporta a versao do PHP como aprovada', function (): void {
     assertTrue(requirementByLabel($items, 'PHP')['ok']);
 });
 
+it('exige PHP 8.2.0 ou superior', function (): void {
+    $items = (new Requirements(requirementsRoot()))->check();
+
+    assertSame('PHP 8.2.0 ou superior', requirementByLabel($items, 'PHP ')['label']);
+});
+
 it('reporta pdo_mysql', function (): void {
     $items = (new Requirements(requirementsRoot()))->check();
 

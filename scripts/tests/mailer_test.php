@@ -63,3 +63,88 @@ it('configure() seta CharSet UTF-8 e os dados de SMTP no objeto PHPMailer', func
     assertSame(2525, $mail->Port);
     assertSame('usuario', $mail->Username);
 });
+
+it('variaveis SMTP_* do .env tem prioridade sobre a tela de configuracoes', function (): void {
+    $base = ['smtp_host' => 'tela.exemplo.com', 'smtp_port' => '25', 'smtp_encryption' => 'none', 'smtp_username' => 'u',
+        'smtp_password' => 'p', 'smtp_from_address' => 'a@x.com', 'smtp_from_name' => 'Tela'];
+    putenv('SMTP_HOST=env.exemplo.com');
+    putenv('SMTP_PASSWORD=senha-do-env');
+
+    try {
+        $config = \App\Core\Mail\SmtpMailer::resolveConfig($base);
+        assertSame('env.exemplo.com', $config['smtp_host']);
+        assertSame('senha-do-env', $config['smtp_password']);
+        assertSame('u', $config['smtp_username'], 'o que nao esta no .env continua vindo da tela');
+        assertSame(
+            ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_password'],
+            \App\Core\Mail\SmtpMailer::envOverriddenKeys(),
+            'com a senha no .env, porta e criptografia tambem nao saem da tela'
+        );
+    } finally {
+        putenv('SMTP_HOST');
+        putenv('SMTP_PASSWORD');
+    }
+});
+
+it('criptografia invalida vira tls', function (): void {
+    putenv('SMTP_ENCRYPTION=xpto');
+
+    try {
+        assertSame('tls', \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_encryption' => 'none'])['smtp_encryption']);
+    } finally {
+        putenv('SMTP_ENCRYPTION');
+    }
+});
+
+it('SMTP_PASSWORD vazio no .env nao apaga a senha salva', function (): void {
+    putenv('SMTP_PASSWORD=');
+
+    try {
+        assertSame('salva', \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_password' => 'salva'])['smtp_password']);
+        assertSame([], \App\Core\Mail\SmtpMailer::envOverriddenKeys());
+    } finally {
+        putenv('SMTP_PASSWORD');
+    }
+});
+
+it('senha do .env nunca vai para um servidor que veio da tela', function (): void {
+    // Qualquer usuario logado edita a tela: com a senha no .env e o host so no
+    // banco, trocar o host mandaria a senha do .env para outro servidor.
+    putenv('SMTP_PASSWORD=senha-do-env');
+
+    try {
+        $config = \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_host' => 'atacante.exemplo.com', 'smtp_password' => 'da-tela']);
+        assertSame('da-tela', $config['smtp_password']);
+        assertSame([], \App\Core\Mail\SmtpMailer::envOverriddenKeys());
+    } finally {
+        putenv('SMTP_PASSWORD');
+    }
+});
+
+it('com a senha no .env, porta e criptografia da tela sao ignoradas', function (): void {
+    putenv('SMTP_HOST=env.exemplo.com');
+    putenv('SMTP_PASSWORD=senha-do-env');
+
+    try {
+        $config = \App\Core\Mail\SmtpMailer::resolveConfig(['smtp_port' => '25', 'smtp_encryption' => 'none']);
+        assertSame('587', $config['smtp_port']);
+        assertSame('tls', $config['smtp_encryption']);
+    } finally {
+        putenv('SMTP_HOST');
+        putenv('SMTP_PASSWORD');
+    }
+});
+
+it('com a senha no .env, criptografia none no .env vira tls', function (): void {
+    putenv('SMTP_HOST=env.exemplo.com');
+    putenv('SMTP_PASSWORD=senha-do-env');
+    putenv('SMTP_ENCRYPTION=none');
+
+    try {
+        assertSame('tls', \App\Core\Mail\SmtpMailer::resolveConfig([])['smtp_encryption']);
+    } finally {
+        putenv('SMTP_HOST');
+        putenv('SMTP_PASSWORD');
+        putenv('SMTP_ENCRYPTION');
+    }
+});

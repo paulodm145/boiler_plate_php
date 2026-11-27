@@ -31,7 +31,11 @@ else:
     <p class="alert alert--warn">Nao foi possivel apagar o arquivo <code>.env.install</code>. Remova-o por FTP.</p>
 <?php endif; ?>
 
-<p>Entre no painel com <strong><?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?></strong> e a senha que voce acabou de definir.</p>
+<?php if ($email !== ''): ?>
+    <p>Entre no painel com <strong><?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?></strong> e a senha que voce acabou de definir.</p>
+<?php else: ?>
+    <p>Entre no painel com um dos usuarios que ja existem no banco. Se nao souber a senha, use "Esqueci minha senha" na tela de login.</p>
+<?php endif; ?>
 
 <div class="actions">
     <a class="button" href="/admin">Ir para o painel</a>

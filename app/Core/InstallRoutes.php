@@ -20,6 +20,7 @@ class InstallRoutes
         $router->post('/install/migrate/run', [InstallController::class, 'runMigration']);
         $router->get('/install/admin', [InstallController::class, 'admin']);
         $router->post('/install/admin', [InstallController::class, 'saveAdmin']);
+        $router->post('/install/admin/skip', [InstallController::class, 'skipAdmin']);
         $router->get('/install/done', [InstallController::class, 'done']);
 
         return $router;

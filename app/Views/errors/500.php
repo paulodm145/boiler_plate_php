@@ -9,6 +9,9 @@ require dirname(__DIR__) . '/partials/site-top.php';
         <div class="accent mb-2" style="font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Erro 500</div>
         <h1 class="mb-3" style="font-size:1.9rem;font-weight:700">Algo deu errado.</h1>
         <p class="text-muted mb-4">Erro interno no servidor. Tente novamente em instantes.</p>
+        <?php if (!empty($requestId)): ?>
+            <p class="text-muted small mb-4">Código do erro: <code><?= htmlspecialchars($requestId, ENT_QUOTES, 'UTF-8') ?></code></p>
+        <?php endif; ?>
         <a class="btn-accent" style="display:inline-block" href="/">Voltar ao início</a>
     </main>
 <?php require dirname(__DIR__) . '/partials/site-bottom.php'; ?>
